@@ -16,7 +16,7 @@ IMAGE_DIRECTORY = './side_test'
 DEPTH_MAP_DIRECTORY = './our_depths'
 
 # save directory
-MASK_OUTPUT_DIRECTORY = './segmentations'
+MASK_OUTPUT_DIRECTORY = './detection_output'
 
 SAM_MODEL_TYPE = 'vit_l'
 SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
@@ -293,6 +293,12 @@ def segment_with_sam(image, centroids, show_each=False):
         valid_masks = []
         for m in masks:
 
+            # check if the mask is too big
+            area = m.sum()
+            if area > 0.3 * height * width:
+                continue
+
+            # check if the mask segments multiple pieces
             if mask_contains_any_points(m, other_piece_points):
                 continue
             
@@ -303,6 +309,7 @@ def segment_with_sam(image, centroids, show_each=False):
             if len(contours) != 1:
                 continue
 
+            # if all filtering passed, this is valid
             valid_masks.append(m)
 
         if len(valid_masks) == 0:
@@ -316,9 +323,6 @@ def segment_with_sam(image, centroids, show_each=False):
 
         # selected_mask = biggest_mask
 
-        # skip huge masks
-        if mask_area > 0.2 * height * width:
-            continue
 
         combined_mask[selected_mask] = piece_index
         piece_index += 1

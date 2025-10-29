@@ -46,9 +46,21 @@ def load_image_depth_pairs(image_dir, depth_dir):
 
 def save_segmentations_to_file(output_dir, name, masks, image):
     os.makedirs(output_dir, exist_ok=True)
+
+    semantics_dir = os.path.join(output_dir, "semantics")
+    os.makedirs(semantics_dir, exist_ok=True)
+
+    display_dir = os.path.join(output_dir, "display")
+    os.makedirs(display_dir, exist_ok=True)
+
+    image_dir = os.path.join(output_dir, "images")
+    os.makedirs(image_dir, exist_ok=True)
+
+    image_path = os.path.join(image_dir, f"{name}.png")
+    cv2.imwrite(image_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     
     # Save the raw integer mask
-    save_path = os.path.join(output_dir, f"{name}_mask.png")
+    save_path = os.path.join(semantics_dir, f"{name}_mask.png")
     cv2.imwrite(save_path, masks.astype(np.uint8))
 
     # Create colorized version
@@ -71,7 +83,7 @@ def save_segmentations_to_file(output_dir, name, masks, image):
     alpha = 0.5
     blended = cv2.addWeighted(overlay, 1 - alpha, colour_mask_float, alpha, 0)
 
-    colour_path = os.path.join(output_dir, f"{name}_mask_coloured.png")
+    colour_path = os.path.join(display_dir, f"{name}_mask_coloured.png")
     cv2.imwrite(colour_path, (blended * 255).astype(np.uint8))
 
 
