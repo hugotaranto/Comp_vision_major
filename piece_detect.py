@@ -15,8 +15,11 @@ from board_detect import get_board_area
 IMAGE_DIRECTORY = './side_test'
 DEPTH_MAP_DIRECTORY = './our_depths'
 
+# save directory
+MASK_OUTPUT_DIRECTORY = './segmentations'
+
 SAM_MODEL_TYPE = 'vit_l'
-SAM_MODEL_PATH = './sam_vit_l_0b3195.pth'
+SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
 
 
 def depth_to_point_cloud(depth_map, mask=None):
@@ -249,7 +252,9 @@ def segment_with_sam(image, centroids, show_each=False):
 
     height, width = image.shape[:2]
     combined_mask = np.zeros((height, width), dtype=np.uint8)
-    leaf_masks = []
+    piece_masks = []
+
+    piece_index = 1
 
     for i, pos_points in enumerate(centroids):
         # --- Build positive & negative prompts ---
@@ -315,8 +320,10 @@ def segment_with_sam(image, centroids, show_each=False):
         if mask_area > 0.2 * height * width:
             continue
 
-        combined_mask[selected_mask] = i + 1
-        leaf_masks.append(selected_mask)
+        combined_mask[selected_mask] = piece_index
+        piece_index += 1
+
+        piece_masks.append(selected_mask)
 
         # --- Visualization ---
         if show_each:
@@ -341,7 +348,7 @@ def segment_with_sam(image, centroids, show_each=False):
             plt.axis('off')
             plt.show()
 
-    return combined_mask, leaf_masks
+    return combined_mask, piece_masks
 
 def main():
 
@@ -350,6 +357,7 @@ def main():
     for i in range(len(data)):
         image = data[i][0]
         depth = data[i][1]
+        name = data[i][2]
 
         # print(threshold_util(np.array([image])))
 
@@ -358,11 +366,13 @@ def main():
         # depth = depth * board_mask
 
         plane_model, inliers = segment_board_plane(depth, board_mask)
-        centroids = detect_pieces(image, depth, plane_model, board_mask, show=True)
+        centroids = detect_pieces(image, depth, plane_model, board_mask, show=False)
 
         segmentation_mask, piece_masks = segment_with_sam(image, centroids, show_each=False)
 
-        plot_segmentation_mask(image, segmentation_mask)
+        # plot_segmentation_mask(image, segmentation_mask)
+
+        save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, image)
 
 if __name__ == "__main__":
     main()
