@@ -1,0 +1,12 @@
+*.pth
+depth-pro_output
+depth_estimation
+ml-depth-pro
+our_depths
+our_images
+side_test
+chess
+boards
+__pycache__
+*.jpg
+*.png
