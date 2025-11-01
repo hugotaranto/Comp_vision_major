@@ -9,7 +9,6 @@ IMAGE_DIR = './our_images'
 LOWER_GREEN_HSV_THRESHOLD = [35, 85, 65]
 UPPER_GREEN_HSV_THRESHOLD = [78, 255, 255]
 
-
 def get_board_area(image, show=False, show_detail=False):
     # --- Step 1: create green mask ---
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)

@@ -19,7 +19,7 @@ def load_images(file_path):
     return images
 
 
-def load_image_depth_pairs(image_dir, depth_dir):
+def load_image_depth_pairs(image_dir, depth_dir, type="depth-pro"):
 
     image_names = os.listdir(image_dir) 
 
@@ -28,7 +28,12 @@ def load_image_depth_pairs(image_dir, depth_dir):
     for name in image_names:
         base_name = os.path.splitext(name)[0]
 
-        depth_name = f"{base_name}.npz"
+        if type == "depth-pro":
+            depth_name = f"{base_name}.npz"
+        elif type == "marigold":
+            depth_name = f"{base_name}_depth.npy"
+        else:
+            raise RuntimeError(f"depth model type {type} not supported")
 
         image_path = os.path.join(image_dir, name)
         depth_path = os.path.join(depth_dir, depth_name)
@@ -37,7 +42,11 @@ def load_image_depth_pairs(image_dir, depth_dir):
             raise RuntimeError(f"depth map not found {depth_path}")
 
         image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-        depth = np.load(depth_path)['depth']
+
+        if type == "depth-pro":
+            depth = np.load(depth_path)['depth']
+        elif type == "marigold":
+            depth = np.load(depth_path).astype(np.float32)
 
         image_depth_pairs.append((image, depth, base_name))
 

@@ -14,6 +14,7 @@ from board_detect import get_board_area
 
 IMAGE_DIRECTORY = './side_test'
 DEPTH_MAP_DIRECTORY = './our_depths'
+# DEPTH_MAP_DIRECTORY = './margold_depth/depth_npy'
 
 # save directory
 MASK_OUTPUT_DIRECTORY = './detection_output'
@@ -356,7 +357,7 @@ def segment_with_sam(image, centroids, show_each=False):
 
 def main():
 
-    data = load_image_depth_pairs(IMAGE_DIRECTORY, DEPTH_MAP_DIRECTORY)
+    data = load_image_depth_pairs(IMAGE_DIRECTORY, DEPTH_MAP_DIRECTORY, type="depth-pro")
 
     for i in range(len(data)):
         image = data[i][0]
@@ -370,7 +371,7 @@ def main():
         # depth = depth * board_mask
 
         plane_model, inliers = segment_board_plane(depth, board_mask)
-        centroids = detect_pieces(image, depth, plane_model, board_mask, show=False)
+        centroids = detect_pieces(image, depth, plane_model, board_mask, show=True)
 
         segmentation_mask, piece_masks = segment_with_sam(image, centroids, show_each=False)
 
