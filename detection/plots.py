@@ -245,3 +245,27 @@ def threshold_util(images:np.ndarray, thresh_vals:List[int] = [0, 155, 40, 78, 2
     return [lh, ls, lv, uh, us, uv]
 
 
+def plot_segment(image, mask, pos_points, neg_points, score):
+
+    overlay = image.copy().astype(np.float32) / 255.0
+    mask_color = np.zeros_like(overlay)
+    mask_color[..., 0] = 1.0  # red
+
+    alpha = 0.5
+    overlay = np.where(mask[..., None],
+                       (1 - alpha) * overlay + alpha * mask_color,
+                       overlay)
+
+    plt.figure(figsize=(15, 15))
+    plt.imshow(overlay)
+    plt.scatter(pos_points[:, 0], pos_points[:, 1],
+                c='cyan', s=50, edgecolors='black', label='Positive')
+    if len(neg_points) > 0:
+        plt.scatter(neg_points[:, 0], neg_points[:, 1],
+                    c='red', s=30, label='Negative', alpha=0.6)
+    plt.legend()
+    plt.title(f"(Score={score:.3f})")
+    plt.axis('off')
+    plt.show()
+
+

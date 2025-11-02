@@ -10,3 +10,7 @@ boards
 __pycache__
 *.jpg
 *.png
+
+*.zip
+*.npy
+photo_convert.py

@@ -2,21 +2,68 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
+from sklearn.cluster import AgglomerativeClustering
+
 from util import *
+from plots import *
 
-IMAGE_DIR = './our_images'
+# IMAGE_DIR = './images'
+# IMAGE_DIR = '../images'
+IMAGE_DIR = '../side_test'
 
-LOWER_GREEN_HSV_THRESHOLD = [35, 85, 65]
-UPPER_GREEN_HSV_THRESHOLD = [78, 255, 255]
+# LOWER_GREEN_HSV_THRESHOLD = [35, 85, 45]
+LOWER_GREEN_HSV_THRESHOLD = [35, 55, 40]
+UPPER_GREEN_HSV_THRESHOLD = [85, 255, 255]
 
+
+# [35, 55, 40, 85, 255, 255]
+
+def show_lines_with_midpoints(img, lines_pts, color=(255,0,0), radius=5):
+    vis = img.copy()
+    num_lines = len(lines_pts) // 2
+    for i in range(num_lines):
+        pt1 = tuple(lines_pts[2*i])
+        pt2 = tuple(lines_pts[2*i+1])
+        cv2.line(vis, pt1, pt2, color, 2)
+        mid = ((pt1[0]+pt2[0])//2, (pt1[1]+pt2[1])//2)
+        cv2.circle(vis, mid, radius, (0,255,0), -1)  # midpoint in green
+    plt.figure(figsize=(10,10))
+    plt.imshow(vis)
+    plt.title("Lines with Midpoints")
+    plt.axis('off')
+    plt.show()
+
+def average_extremal_lines(lines, mean_coords, n=4, side='left'):
+    if side =='left' or side == 'top':
+        idxs = np.argsort(mean_coords)[:n]
+    else:
+        idxs = np.argsort(mean_coords)[-n:]
+
+    pts = lines[idxs].reshape(-1, 2)
+
+    return pts
 
 def get_board_area(image, show=False, show_detail=False):
     # --- Step 1: create green mask ---
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     mask_green = cv2.inRange(hsv, np.array(LOWER_GREEN_HSV_THRESHOLD),
                                      np.array(UPPER_GREEN_HSV_THRESHOLD))
-    mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_CLOSE, np.ones((15,15), np.uint8))
-    mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
+
+    if show_detail:
+        plt.imshow(mask_green, cmap='gray')
+        plt.title("Green masked area")
+        plt.axis("off")
+        plt.show()
+
+    mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_OPEN, np.ones((10,10), np.uint8))
+    mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+
+    if show_detail:
+        plt.imshow(mask_green, cmap='gray')
+        plt.title("Small contours removed")
+        plt.axis("off")
+        plt.show()
+
     mask_gray = (mask_green * 255).astype(np.uint8)
 
     # Convert to float and blur/dilate
@@ -31,7 +78,7 @@ def get_board_area(image, show=False, show_detail=False):
         plt.show()
 
     # --- Step 2: edge detection ---
-    edges = cv2.Canny(mask_blur_norm, 50, 100, apertureSize=3)
+    edges = cv2.Canny(mask_blur_norm, 100, 200, apertureSize=3)
     if show_detail:
         plt.imshow(edges, cmap='gray')
         plt.title("Canny Edges from Green Mask")
@@ -39,7 +86,7 @@ def get_board_area(image, show=False, show_detail=False):
         plt.show()
 
     # --- Step 3: Hough line detection ---
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=20, maxLineGap=40)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=70 , minLineLength=150, maxLineGap=1000)
     if lines is None:
         print("No lines detected.")
         return np.zeros(mask_gray.shape, dtype=np.uint8), None
@@ -58,15 +105,63 @@ def get_board_area(image, show=False, show_detail=False):
     vertical_lines = []
     horizontal_lines = []
 
+    # --- Step 2: cluster lines by angle ---
+    angles = []
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        if abs(x2 - x1) < abs(y2 - y1):  # vertical-ish
-            vertical_lines.append([[x1, y1], [x2, y2]])
-        else:  # horizontal-ish
-            horizontal_lines.append([[x1, y1], [x2, y2]])
+        angle = np.arctan2((y2 - y1), (x2 - x1))  # angle in radians
+        angles.append(angle)
+    angles = np.array(angles)
 
-    vertical_lines = np.array(vertical_lines)      # shape: (num_vertical_lines, 2, 2)
-    horizontal_lines = np.array(horizontal_lines)  # shape: (num_horizontal_lines, 2, 2)
+    points = np.column_stack((np.cos(2*angles), np.sin(2*angles)))
+
+    cluster = AgglomerativeClustering(n_clusters=2)
+    labels = cluster.fit_predict(points)
+
+    if show_detail:
+        plt.figure(figsize=(6,6))
+        plt.scatter(points[:,0], points[:,1], c=labels)
+        plt.xlabel('cos(angle)')
+        plt.ylabel('sin(angle)')
+        plt.title('Clustering lines by angle on the unit circle')
+        plt.axis('equal')
+        plt.show()
+
+    # Now separate
+    lines_group0 = lines[labels == 0]
+    lines_group1 = lines[labels == 1]
+
+
+    # Determine which group is vertical and which is horizontal
+    mean_angle0 = np.mean(np.abs(np.sin([np.arctan2(y2-y1, x2-x1) for x1,y1,x2,y2 in lines_group0[:,0]])))
+    mean_angle1 = np.mean(np.abs(np.sin([np.arctan2(y2-y1, x2-x1) for x1,y1,x2,y2 in lines_group1[:,0]])))
+
+    if mean_angle0 > mean_angle1:
+        vertical_lines = lines_group0
+        horizontal_lines = lines_group1
+    else:
+        vertical_lines = lines_group1
+        horizontal_lines = lines_group0
+
+    if show_detail:
+        vis_lines = image.copy()
+
+        # Draw group 0 in red
+        for line in vertical_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(vis_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+        # Draw group 1 in blue
+        for line in horizontal_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(vis_lines, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+        plt.figure(figsize=(10, 10))
+        plt.imshow(vis_lines)
+        plt.title("Line Groups after Clustering, Red = vertical, blue = horizontal")
+        plt.axis('off')
+        plt.show()
+
 
     if len(vertical_lines) < 2 or len(horizontal_lines) < 2:
         print("Not enough vertical/horizontal lines")
@@ -74,19 +169,20 @@ def get_board_area(image, show=False, show_detail=False):
 
     # --- Step 3: find extremal lines ---
 
-    # For verticals: use min/max of mean x of each line
-    vertical_mean_x = vertical_lines[:,:,0].mean(axis=1)
-    left_idx = np.argmin(vertical_mean_x)
-    right_idx = np.argmax(vertical_mean_x)
-    left_line_pts = vertical_lines[left_idx]   # full 2 points
-    right_line_pts = vertical_lines[right_idx]
+    # For verticals
+    vertical_mean_x = vertical_lines[:, 0, [0, 2]].mean(axis=1)
+    left_line_pts  = average_extremal_lines(vertical_lines, vertical_mean_x, n=2, side='left')
+    right_line_pts = average_extremal_lines(vertical_lines, vertical_mean_x, n=2, side='right')
 
-    # For horizontals: use min/max of mean y of each line
-    horizontal_mean_y = horizontal_lines[:,:,1].mean(axis=1)
-    top_idx = np.argmin(horizontal_mean_y)
-    bottom_idx = np.argmax(horizontal_mean_y)
-    top_line_pts = horizontal_lines[top_idx]
-    bottom_line_pts = horizontal_lines[bottom_idx]
+    # For horizontals
+    horizontal_mean_y = horizontal_lines[:, 0, [1, 3]].mean(axis=1)
+    top_line_pts    = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=2, side='top')
+    bottom_line_pts = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=2, side='bottom')
+
+    if show_detail:
+        show_lines_with_midpoints(image, right_line_pts, color=(255,0,0))
+        # show_lines_with_midpoints(image, horizontal_lines, color=(0,0,255))
+
 
     if show_detail and image is not None:
         vis_selected = image.copy()
@@ -157,33 +253,38 @@ def get_board_area(image, show=False, show_detail=False):
         line_intersection(p_l, v_l, p_b, v_b),  # bottom-left
     ], dtype=np.int32)
 
-    if show_detail and image is not None:
+    if (show_detail or show) and image is not None:
         vis_corners = image.copy()
         for i, (x, y) in enumerate(corners):
-            cv2.circle(vis_corners, (int(x), int(y)), 8, (0,0,255), -1)
+            cv2.circle(vis_corners, (int(x), int(y)), 20, (0,0,255), -1)
             cv2.putText(vis_corners, f"{i+1}", (int(x)+5,int(y)-5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+
+        plt.figure(figsize=(15, 15))
         plt.imshow(vis_corners)
         plt.title("Board Corners from Intersections")
         plt.axis('off')
         plt.show()
 
     # now create the mask with the board area
-    mask = np.zeros(image.shape[:2], dtype=np.uint8)
-    cv2.fillPoly(mask, [corners], 1)
+    # mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    # cv2.fillPoly(mask, [corners], 1)
 
-    if (show or show_detail):
-        plt.imshow(mask, cmap='gray')
-        plt.show()
-
-    return mask
+    # return mask
+    return corners
 
 
 if __name__ == "__main__":
 
-    images = load_images(IMAGE_DIR)
+    images, _, _ = load_images(IMAGE_DIR)
 
     for image in images:
         get_board_area(image, show_detail=True)
+        # get_board_area(image, show=True)
+        # threshold_util(np.array([image]), [35, 55, 40, 85, 255, 255])
+
+
+# LOWER_GREEN_HSV_THRESHOLD = [35, 55, 40]
+# UPPER_GREEN_HSV_THRESHOLD = [85, 255, 255]
 
 
