@@ -11,17 +11,23 @@ from segment_anything import sam_model_registry, SamPredictor
 from plots import *
 from util import *
 from board_detect import get_board_area
+from depth import depth_predict, load_model
 
-IMAGE_DIRECTORY = './side_test'
-DEPTH_MAP_DIRECTORY = './our_depths'
+IMAGE_DIRECTORY = '../side_test'
+# IMAGE_DIRECTORY = '../images'
+# DEPTH_MAP_DIRECTORY = './our_depths'
 # DEPTH_MAP_DIRECTORY = './margold_depth/depth_npy'
 
 # save directory
 MASK_OUTPUT_DIRECTORY = './detection_output'
 
 SAM_MODEL_TYPE = 'vit_l'
-SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
+SAM_MODEL_PATH = '../sam_checkpoints/sam_vit_l_0b3195.pth'
 
+
+DEPTH_PRO_CHECKPOINT_PATH = '../ml-depth-pro/checkpoints/depth_pro.pt'
+
+MAX_DIM = 1024
 
 def depth_to_point_cloud(depth_map, mask=None):
     H, W = depth_map.shape
@@ -46,7 +52,7 @@ def segment_board_plane(depth_map, board_mask):
     plane_model, inliers = pcd.segment_plane(
         distance_threshold=0.002,  # adjust if noisy
         ransac_n=3,
-        num_iterations=1000
+        num_iterations=500
     )
     [a, b, c, d] = plane_model
     return plane_model, inliers
@@ -89,9 +95,107 @@ def get_central_points(piece_mask, K=3):
 
     return points
 
-def refine_mask_by_residual(mask, height_residual, keep_fraction=0.5):
+
+# def detect_pieces(image, depth_map, plane_model, board_mask, show=True):
+#
+#     height_residual = subtract_plane(depth_map, plane_model)
+#     height_residual[board_mask == 0] = 1
+#     board_heights = height_residual[board_mask > 0]
+#
+#     median_h = np.median(board_heights)
+#     mad = np.median(np.abs(board_heights - median_h))  # median absolute deviation
+#
+#     # pieces are lower than board by > k*MAD
+#     k = 9
+#     threshold = median_h - k*mad
+#     mask = (height_residual < threshold).astype(np.uint8)
+#
+#     refined_mask = refine_mask_by_residual(mask, height_residual, keep_fraction=0.3)
+#
+#     kernel = np.ones((3, 3), np.uint8)
+#     refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+#
+#     # erode the mask to separate pieces
+#     kernel = np.ones((2,2), np.uint8)
+#     eroded_mask = cv2.erode(refined_mask, kernel, iterations=2)
+#     eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+#     eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+#
+#
+#     # Label pieces
+#     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(eroded_mask)
+#     print(f"Detected {num_labels-1} pieces at threshold={threshold}")
+#
+#     height, width = image.shape[:2]
+#     area_reject_percentage = 5 # reject "pieces" detected that are > 5% of the image
+#     area_reject_threshold = (height * width / 100) * area_reject_percentage
+#
+#     min_area = 5
+#
+#     valid_centroids = []
+#
+#     display_image = image.copy()
+#
+#     for i in range(1, num_labels):  # skip background
+#         x, y, w, h, area = stats[i]
+#
+#         # reject if the area is too big
+#         if area > area_reject_threshold or area < min_area:
+#             continue
+#
+#         # Extract mask for this component
+#         piece_mask = (labels[y:y+h, x:x+w] == i).astype(np.uint8)
+#
+#         points = get_central_points(piece_mask, K=1)
+#
+#         # Shift local points to global image coordinates
+#         global_points = [(x + px, y + py) for (px, py) in points]
+#
+#         valid_centroids.append(global_points)
+#
+#         if show:
+#             # Draw them for debugging
+#             for (gx, gy) in global_points:
+#                 cv2.circle(display_image, (int(gx), int(gy)), 10, (0, 0, 255), -1)
+#
+#     if show:
+#
+#         # --- Plot 3 panels side-by-side ---
+#         fig, axes = plt.subplots(3, 3, figsize=(15, 10))
+#
+#         axes[0, 1].imshow(depth_map, cmap='turbo')
+#         axes[0, 1].set_title("Monocular Depth Map Estimation")
+#
+#         im0 = axes[1, 0].imshow(height_residual, cmap='turbo')
+#         axes[1, 0].set_title("Height residuals (above plane)")
+#         plt.colorbar(im0, ax=axes[1, 0], fraction=0.046, pad=0.04)
+#
+#         axes[1, 1].imshow(mask, cmap='gray')
+#         axes[1, 1].set_title(f"Binary mask (<{threshold:.4f})")
+#
+#         axes[1, 2].imshow(eroded_mask, cmap='gray')
+#         axes[1, 2].set_title("Eroded Mask")
+#
+#         axes[2, 1].imshow(display_image[..., ::-1])
+#         axes[2, 1].set_title(f"Detected pieces ({num_labels-1})")
+#
+#         for i in range(len(axes)):
+#             for j in range(len(axes[i])):
+#                 axes[i, j].axis('off')
+#
+#         plt.tight_layout()
+#         plt.show()
+#
+#     return valid_centroids
+
+def refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5):
 
     refined_mask = np.zeros_like(mask, dtype=np.uint8)
+
+    # Create a mask of the polygon defined by the corners
+    board_mask = np.zeros_like(mask, dtype=np.uint8)
+    cv2.fillPoly(board_mask, [corners.astype(np.int32)], 1)
+    board_mask_bool = board_mask.astype(bool)
 
     num_labels, labels = cv2.connectedComponents(mask)
 
@@ -100,6 +204,10 @@ def refine_mask_by_residual(mask, height_residual, keep_fraction=0.5):
         values = height_residual[component_mask]
 
         if len(values) == 0:
+            continue
+
+        # check if the component intersects the board
+        if not np.any(np.logical_and(component_mask, board_mask_bool)):
             continue
 
         # Find cutoff for the lowest X% values
@@ -112,30 +220,31 @@ def refine_mask_by_residual(mask, height_residual, keep_fraction=0.5):
 
     return refined_mask
 
-
-
-def detect_pieces(image, depth_map, plane_model, board_mask, show=True):
+def detect_pieces(image, depth_map, plane_model, corners, show=True):
 
     height_residual = subtract_plane(depth_map, plane_model)
-    height_residual[board_mask == 0] = 1
-    board_heights = height_residual[board_mask > 0]
+    # height_residual[board_mask == 0] = 1
+    # board_heights = height_residual[board_mask > 0]
 
-    median_h = np.median(board_heights)
-    mad = np.median(np.abs(board_heights - median_h))  # median absolute deviation
+    median_h = np.median(height_residual)
+    mad = np.median(np.abs(height_residual - median_h))  # median absolute deviation
 
     # pieces are lower than board by > k*MAD
-    k = 4.5
+    k = 9
     threshold = median_h - k*mad
     mask = (height_residual < threshold).astype(np.uint8)
 
-    refined_mask = refine_mask_by_residual(mask, height_residual, keep_fraction=0.4)
+    refined_mask = refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5)
 
     kernel = np.ones((3, 3), np.uint8)
-    refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+    refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=4)
 
     # erode the mask to separate pieces
     kernel = np.ones((2,2), np.uint8)
     eroded_mask = cv2.erode(refined_mask, kernel, iterations=2)
+    eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+
 
     # Label pieces
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(eroded_mask)
@@ -161,7 +270,7 @@ def detect_pieces(image, depth_map, plane_model, board_mask, show=True):
         # Extract mask for this component
         piece_mask = (labels[y:y+h, x:x+w] == i).astype(np.uint8)
 
-        points = get_central_points(piece_mask, K=2)
+        points = get_central_points(piece_mask, K=1)
 
         # Shift local points to global image coordinates
         global_points = [(x + px, y + py) for (px, py) in points]
@@ -171,7 +280,7 @@ def detect_pieces(image, depth_map, plane_model, board_mask, show=True):
         if show:
             # Draw them for debugging
             for (gx, gy) in global_points:
-                cv2.circle(display_image, (int(gx), int(gy)), 3, (0, 0, 255), -1)
+                cv2.circle(display_image, (int(gx), int(gy)), 10, (0, 0, 255), -1)
 
     if show:
 
@@ -188,8 +297,11 @@ def detect_pieces(image, depth_map, plane_model, board_mask, show=True):
         axes[1, 1].imshow(mask, cmap='gray')
         axes[1, 1].set_title(f"Binary mask (<{threshold:.4f})")
 
-        axes[1, 2].imshow(eroded_mask, cmap='gray')
-        axes[1, 2].set_title("Eroded Mask")
+        axes[1, 2].imshow(refined_mask, cmap='gray')
+        axes[1, 2].set_title("Refined Mask")
+
+        axes[2, 0].imshow(eroded_mask, cmap='gray')
+        axes[2, 0].set_title("Eroded Mask")
 
         axes[2, 1].imshow(display_image[..., ::-1])
         axes[2, 1].set_title(f"Detected pieces ({num_labels-1})")
@@ -242,13 +354,7 @@ def mask_contains_any_points(mask, points):
 
     return mask[points[:, 1], points[:, 0]].any()
 
-def segment_with_sam(image, centroids, show_each=False):
-    sam = sam_model_registry[SAM_MODEL_TYPE](checkpoint=SAM_MODEL_PATH)
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    sam.to(device)
-
-    predictor = SamPredictor(sam)
+def segment_with_sam(image, centroids, predictor, show_each=False):
     predictor.set_image(image)
 
     height, width = image.shape[:2]
@@ -270,8 +376,6 @@ def segment_with_sam(image, centroids, show_each=False):
             np.ones(len(pos_points), dtype=np.int32),
             np.zeros(len(neg_points), dtype=np.int32)
         ]) if len(neg_points) > 0 else np.ones(len(pos_points), dtype=np.int32)
-
-        print(all_labels)
 
         # --- Predict mask ---
         masks, scores, _ = predictor.predict(
@@ -310,20 +414,18 @@ def segment_with_sam(image, centroids, show_each=False):
             if len(contours) != 1:
                 continue
 
+
             # if all filtering passed, this is valid
             valid_masks.append(m)
 
         if len(valid_masks) == 0:
             selected_mask = best_mask
-            print("Highest score mask used")
         else:
             areas = [m.sum() for m in valid_masks]
             idx = np.argmax(areas)
             selected_mask = valid_masks[idx]
-            print("Biggest exclusive mask used, score:", scores[idx])
 
         # selected_mask = biggest_mask
-
 
         combined_mask[selected_mask] = piece_index
         piece_index += 1
@@ -353,31 +455,122 @@ def segment_with_sam(image, centroids, show_each=False):
             plt.axis('off')
             plt.show()
 
+    predictor.reset_image()
+
     return combined_mask, piece_masks
+
+
+def expand_corners(corners, factor=1/16, show=False, image=None) -> np.ndarray:
+    center = corners.mean(axis=0)
+
+    # Compute the bounding box width and height
+    w = corners[:, 0].max() - corners[:, 0].min()
+    h = corners[:, 1].max() - corners[:, 1].min()
+
+    # Expansion factor (1/16th of size)
+    scale_x = w * factor
+    scale_y = h * factor
+
+    expanded_corners = corners.copy().astype(float)
+    for i, (x, y) in enumerate(corners):
+        dx = x - center[0]
+        dy = y - center[1]
+        norm = np.sqrt(dx**2 + dy**2)
+        if norm > 0:
+            dx /= norm
+            dy /= norm
+        expanded_corners[i, 0] += dx * scale_x
+        expanded_corners[i, 1] += dy * scale_y
+
+    # Clip corners to image bounds
+    if image is not None:
+        h_img, w_img = image.shape[:2]
+        expanded_corners[:, 0] = np.clip(expanded_corners[:, 0], 0, w_img - 1)
+        expanded_corners[:, 1] = np.clip(expanded_corners[:, 1], 0, h_img - 1)
+
+    expanded_corners = expanded_corners.astype(np.int32)
+
+    if show and image is not None:
+        vis_corners = image.copy()
+        for i, (x, y) in enumerate(expanded_corners):
+            cv2.circle(vis_corners, (int(x), int(y)), 20, (0,0,255), -1)
+            cv2.putText(vis_corners, f"{i+1}", (int(x)+5,int(y)-5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+
+        plt.figure(figsize=(15, 15))
+        plt.imshow(vis_corners)
+        plt.title("Board Corners from Intersections")
+        plt.axis('off')
+        plt.show()
+
+    return expanded_corners
+
+
+def load_sam(sam_path):
+
+    sam = sam_model_registry[SAM_MODEL_TYPE](checkpoint=sam_path)
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    sam.to(device)
+
+    predictor = SamPredictor(sam)
+
+    return predictor
 
 def main():
 
-    data = load_image_depth_pairs(IMAGE_DIRECTORY, DEPTH_MAP_DIRECTORY, type="depth-pro")
+    # data = load_image_depth_pairs(IMAGE_DIRECTORY, DEPTH_MAP_DIRECTORY, type="depth-pro")
+    images, f_pxs, names = load_images(IMAGE_DIRECTORY)
 
-    for i in range(len(data)):
-        image = data[i][0]
-        depth = data[i][1]
-        name = data[i][2]
+    # load depth model
+    print("Loading depth model")
+    depth_model, depth_transform = load_model(DEPTH_PRO_CHECKPOINT_PATH)
+    print("Loading SAM")
+    sam_predictor = load_sam(SAM_MODEL_PATH)
 
-        # print(threshold_util(np.array([image])))
+    for i in range(len(images)):
+        image = images[i]
+        f_px = f_pxs[i]
+        name = names[i]
 
-        board_mask = get_board_area(image, show=False, show_detail=False)
+        print("getting board mask")
+        corners = get_board_area(image, show=True, show_detail=True)
+
+        # expand the corners out slightly
+        expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
+
+        image_resized, corners = resize_image(image, MAX_DIM, expanded_corners, corners, show=False)
+
+        print("predicting depth")
+        depth = depth_predict(image_resized, f_px, depth_model, depth_transform)
+        print("depth prediction done")
+
+        # create the board mask
+        # board_mask = np.zeros(image.shape[:2], dtype=np.uint8) 
+        # cv2.fillPoly(board_mask, [expanded_corners], 1)
+
         # apply the mask to the depth map
         # depth = depth * board_mask
 
-        plane_model, inliers = segment_board_plane(depth, board_mask)
-        centroids = detect_pieces(image, depth, plane_model, board_mask, show=True)
+        print("getting plane model using ransac")
+        # plane_model, inliers = segment_board_plane(depth, board_mask)
+        plane_model, inliers = segment_board_plane(depth, None)
 
-        segmentation_mask, piece_masks = segment_with_sam(image, centroids, show_each=False)
+        print("detecting pieces")
+        # centroids = detect_pieces(image, depth, plane_model, board_mask, show=True)
+        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=True)
 
-        # plot_segmentation_mask(image, segmentation_mask)
+        print("Segmenting with SAM")
+        segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False)
 
-        save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, image)
+        # plot_segmentation_mask(image_resized, segmentation_mask)
+
+
+        # pad the images to target before saving
+        final_image = pad_to_target(image_resized, MAX_DIM)
+        segmentation_mask = pad_to_target(segmentation_mask, MAX_DIM)
+
+        save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
 
 if __name__ == "__main__":
     main()

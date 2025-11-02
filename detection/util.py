@@ -2,21 +2,100 @@ import os
 import cv2
 import numpy as np
 from matplotlib import cm
+from depth_pro import load_rgb
+import matplotlib.pyplot as plt
+
+def resize_image(image, target_w, expanded_corners, corners, show=False):
+    # --- crop the image ---
+    x_min = expanded_corners[:,0].min()
+    x_max = expanded_corners[:,0].max()
+    y_min = expanded_corners[:,1].min()
+    y_max = expanded_corners[:,1].max()
+
+    cropped = image[y_min:y_max, x_min:x_max]
+
+    # shift corners to cropped image coordinates
+    cropped_board_corners = corners - np.array([x_min, y_min])
+
+    cropped_h, cropped_w = cropped.shape[:2]
+
+    # target height for 4:3 ratio
+    target_h = round(target_w * 3 / 4)
+
+    # compute scale to fit inside 4:3 while keeping aspect ratio
+    scale = min(target_w / cropped_w, target_h / cropped_h)
+    new_w = int(cropped_w * scale)
+    new_h = int(cropped_h * scale)
+
+    # resize image
+    resized = cv2.resize(cropped, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    # scale corners to match resized image
+    resized_board_corners = cropped_board_corners * scale
+
+    if show:
+        vis_corners = resized.copy()
+        for i, (x, y) in enumerate(resized_board_corners):
+            cv2.circle(vis_corners, (int(x), int(y)), 20, (0,0,255), -1)
+            cv2.putText(vis_corners, f"{i+1}", (int(x)+5,int(y)-5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+
+        plt.figure(figsize=(15, 15))
+        plt.imshow(vis_corners)
+        plt.title("Board Corners in Resized Image")
+        plt.axis('off')
+        plt.show()
+
+    return resized, resized_board_corners
+
+
+def pad_to_target(image, target_w, pad_value=0, board_corners=None):
+    target_h = round(target_w * 3 / 4)
+    h, w = image.shape[:2]
+
+    pad_top = (target_h - h) // 2
+    pad_bottom = target_h - h - pad_top
+    pad_left = (target_w - w) // 2
+    pad_right = target_w - w - pad_left
+
+    # Handle both 2D and 3D arrays
+    if image.ndim == 3:
+        value = [pad_value] * image.shape[2]
+    else:
+        value = pad_value
+
+    padded_image = cv2.copyMakeBorder(
+        image, pad_top, pad_bottom, pad_left, pad_right,
+        borderType=cv2.BORDER_CONSTANT, value=value
+    )
+
+    if board_corners is not None:
+        padded_board_corners = board_corners + np.array([pad_left, pad_top])
+        return padded_image, padded_board_corners
+
+    return padded_image
+
+
 
 def load_images(file_path):
-
     images = []
+    f_pxs = []
+    names = []
 
     image_names = os.listdir(file_path)
 
     for name in image_names:
         path = os.path.join(file_path, name)
+        print(f"Loading Image: {path}")
 
-        image = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
+        image, _, f_px = load_rgb(path)
 
         images.append(image)
+        f_pxs.append(f_px)
+        names.append(name)
 
-    return images
+
+    return images, f_pxs, names
 
 
 def load_image_depth_pairs(image_dir, depth_dir, type="depth-pro"):
@@ -39,7 +118,8 @@ def load_image_depth_pairs(image_dir, depth_dir, type="depth-pro"):
         depth_path = os.path.join(depth_dir, depth_name)
 
         if not os.path.exists(depth_path):
-            raise RuntimeError(f"depth map not found {depth_path}")
+            print(f"depth map not found {depth_path}")
+            continue
 
         image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
 
@@ -70,6 +150,7 @@ def save_segmentations_to_file(output_dir, name, masks, image):
     
     # Save the raw integer mask
     save_path = os.path.join(semantics_dir, f"{name}_mask.png")
+    print(f"saved masks to {save_path}")
     cv2.imwrite(save_path, masks.astype(np.uint8))
 
     # Create colorized version

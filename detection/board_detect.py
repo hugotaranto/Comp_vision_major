@@ -7,8 +7,9 @@ from sklearn.cluster import AgglomerativeClustering
 from util import *
 from plots import *
 
-IMAGE_DIR = './images'
-# IMAGE_DIR = './side_test'
+# IMAGE_DIR = './images'
+# IMAGE_DIR = '../images'
+IMAGE_DIR = '../side_test'
 
 # LOWER_GREEN_HSV_THRESHOLD = [35, 85, 45]
 LOWER_GREEN_HSV_THRESHOLD = [35, 55, 40]
@@ -266,19 +267,24 @@ def get_board_area(image, show=False, show_detail=False):
         plt.show()
 
     # now create the mask with the board area
-    mask = np.zeros(image.shape[:2], dtype=np.uint8)
-    cv2.fillPoly(mask, [corners], 1)
+    # mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    # cv2.fillPoly(mask, [corners], 1)
 
-    return mask
+    # return mask
+    return corners
 
 
 if __name__ == "__main__":
 
-    images = load_images(IMAGE_DIR)
+    images, _, _ = load_images(IMAGE_DIR)
 
     for image in images:
-        # get_board_area(image, show_detail=True)
-        get_board_area(image, show=True)
+        get_board_area(image, show_detail=True)
+        # get_board_area(image, show=True)
+        # threshold_util(np.array([image]), [35, 55, 40, 85, 255, 255])
 
+
+# LOWER_GREEN_HSV_THRESHOLD = [35, 55, 40]
+# UPPER_GREEN_HSV_THRESHOLD = [85, 255, 255]
 
 
