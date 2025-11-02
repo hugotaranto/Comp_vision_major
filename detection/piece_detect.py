@@ -13,8 +13,10 @@ from util import *
 from board_detect import get_board_area
 from depth import depth_predict, load_model
 
-IMAGE_DIRECTORY = '../side_test'
-# IMAGE_DIRECTORY = '../images'
+from scipy.ndimage import maximum_filter, label
+
+# IMAGE_DIRECTORY = '../side_test'
+IMAGE_DIRECTORY = '../images'
 # DEPTH_MAP_DIRECTORY = './our_depths'
 # DEPTH_MAP_DIRECTORY = './margold_depth/depth_npy'
 
@@ -485,12 +487,12 @@ def main():
         plane_model, inliers = segment_board_plane(depth, None)
 
         print("detecting pieces")
-        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=True)
+        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
 
         print("Segmenting with SAM")
         segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
 
-        plot_segmentation_mask(image_resized, segmentation_mask)
+        # plot_segmentation_mask(image_resized, segmentation_mask)
 
         # pad the images to target before saving
         final_image = pad_to_target(image_resized, MAX_DIM)
