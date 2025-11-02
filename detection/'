@@ -148,10 +148,10 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
     refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=4)
 
     # erode the mask to separate pieces
-    kernel = np.ones((3,3), np.uint8)
-    # eroded_mask = cv2.erode(refined_mask, kernel, iterations=2)
-    eroded_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=8)
-    # eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+    kernel = np.ones((2,2), np.uint8)
+    eroded_mask = cv2.erode(refined_mask, kernel, iterations=2)
+    eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
 
 
     # Label pieces
@@ -325,7 +325,7 @@ def segment_with_sam(image, centroids, predictor, show_each=False, show_final=Fa
             # print(f"area: {area}, height: {height}, width: {width}")
 
             if area > 0.03 * height * width:
-                print("too big")
+                # print("too big")
                 continue
 
 
@@ -339,31 +339,16 @@ def segment_with_sam(image, centroids, predictor, show_each=False, show_final=Fa
             #     print("disconnected")
             #     continue
             if len(contours) > 1:
-                # Find contour with the largest area that actually contains at least one positive point
-                valid_contours = []
-                for contour in contours:
-                    for point in pos_points:
-                        if cv2.pointPolygonTest(contour, tuple(point), False) >= 0:
-                            valid_contours.append(contour)
-                            break  # no need to check all points for this contour
-
-                if len(valid_contours) == 0:
-                    # fallback: no contour contains the positive point — skip this mask
-                    print("No contour contains the prompt point, skipping mask")
-                    continue
-
-                # choose the largest among the valid ones
-                largest_contour = max(valid_contours, key=cv2.contourArea)
-
-                # Create a clean mask with only that contour filled in
+                # Find contour with the largest area
+                largest_contour = max(contours, key=cv2.contourArea)
+                # Create a clean mask with only the largest contour filled in
                 clean_mask = np.zeros_like(mask_uint8)
                 cv2.drawContours(clean_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
                 m = (clean_mask > 0).astype(np.uint8)
 
-
             # check if the mask segments multiple pieces
             if mask_contains_any_points(m, other_piece_points):
-                print("masked other pieces")
+                # print("masked other pieces")
                 continue
             
 
@@ -485,12 +470,12 @@ def main():
         plane_model, inliers = segment_board_plane(depth, None)
 
         print("detecting pieces")
-        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=True)
+        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
 
         print("Segmenting with SAM")
         segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
 
-        plot_segmentation_mask(image_resized, segmentation_mask)
+        # plot_segmentation_mask(image_resized, segmentation_mask)
 
         # pad the images to target before saving
         final_image = pad_to_target(image_resized, MAX_DIM)
