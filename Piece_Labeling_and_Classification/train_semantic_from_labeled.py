@@ -335,6 +335,16 @@ def train_classifiers(X, y):
     for name, clf in classifiers.items():
         print(f"\n   Training {name}...")
         
+        # Show algorithm specifications
+        if name == 'Random Forest':
+            print(f"      • Trees: {clf.n_estimators}, Max depth: {clf.max_depth}, Min samples split: {clf.min_samples_split}")
+        elif name == 'SVM (RBF)':
+            print(f"      • Kernel: RBF, C: {clf.C}, Gamma: {clf.gamma}")
+        elif name == 'SVM (Linear)':
+            print(f"      • Kernel: Linear, C: {clf.C}")
+        elif name == 'K-NN':
+            print(f"      • Neighbors: {clf.n_neighbors}, Weights: {clf.weights}")
+        
         # Train
         clf.fit(X_train_scaled, y_train)
         
@@ -349,7 +359,7 @@ def train_classifiers(X, y):
             'true_labels': y_test
         }
         
-        print(f"   {name} Accuracy: {accuracy:.4f}")
+        print(f"      ✓ Accuracy: {accuracy:.4f}")
         
         if accuracy > best_accuracy:
             best_accuracy = accuracy
@@ -437,6 +447,34 @@ def main():
         print(f"   Model File: {model_path}")
         print(f"   Feature Count: {X.shape[1]}")
         
+        # Show detailed best model specifications
+        print(f"\n⚙️  Best Model Specifications:")
+        if model_name == 'Random Forest':
+            print(f"   • Algorithm: Random Forest Classifier")
+            print(f"   • Number of trees (n_estimators): {classifier.n_estimators}")
+            print(f"   • Maximum depth: {classifier.max_depth}")
+            print(f"   • Minimum samples per split: {classifier.min_samples_split}")
+            print(f"   • Class weighting: balanced")
+            print(f"   • Random state: {classifier.random_state}")
+        elif model_name == 'SVM (RBF)':
+            print(f"   • Algorithm: Support Vector Machine")
+            print(f"   • Kernel: Radial Basis Function (RBF)")
+            print(f"   • Regularization parameter (C): {classifier.C}")
+            print(f"   • Gamma: {classifier.gamma}")
+            print(f"   • Class weighting: balanced")
+            print(f"   • Random state: {classifier.random_state}")
+        elif model_name == 'SVM (Linear)':
+            print(f"   • Algorithm: Support Vector Machine") 
+            print(f"   • Kernel: Linear")
+            print(f"   • Regularization parameter (C): {classifier.C}")
+            print(f"   • Class weighting: balanced")
+            print(f"   • Random state: {classifier.random_state}")
+        elif model_name == 'K-NN':
+            print(f"   • Algorithm: K-Nearest Neighbors")
+            print(f"   • Number of neighbors (K): {classifier.n_neighbors}")
+            print(f"   • Distance weighting: {classifier.weights}")
+            print(f"   • Distance metric: {getattr(classifier, 'metric', 'minkowski')}")
+        
         # Show feature importance for Random Forest
         if hasattr(classifier, 'feature_importances_'):
             print(f"\n🔍 Top 10 Most Important Features:")
@@ -444,6 +482,13 @@ def main():
             top_indices = np.argsort(feature_importance)[-10:][::-1]
             for i, idx in enumerate(top_indices):
                 print(f"   {i+1}. Feature {idx}: {feature_importance[idx]:.4f}")
+        
+        # Show data preprocessing info
+        print(f"\n📊 Data Processing:")
+        print(f"   • Feature scaling: StandardScaler (mean=0, std=1)")
+        print(f"   • Train/test split: 80/20 (stratified)")
+        print(f"   • Cross-validation: None (single split)")
+        print(f"   • Class balancing: Automatic via class_weight='balanced'")
     
     else:
         print("❌ Training failed!")
