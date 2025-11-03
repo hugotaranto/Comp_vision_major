@@ -13,7 +13,6 @@ import matplotlib.patches as mpatches
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import os
 from PIL import Image
-from scipy import ndimage
 
 def create_chess_board_layout():
     """
@@ -45,36 +44,6 @@ def create_chess_board_layout():
         board[row, col] = piece
     
     return board
-
-def get_piece_unicode(piece_code):
-    """
-    Convert piece codes to Unicode chess symbols.
-    
-    Args:
-        piece_code (str): Two character code like 'WK' (White King), 'BP' (Black Pawn)
-    
-    Returns:
-        str: Unicode chess symbol
-    """
-    piece_symbols = {
-        # White pieces
-        'WK': '♔',  # White King
-        'WQ': '♕',  # White Queen  
-        'WR': '♖',  # White Rook
-        'WB': '♗',  # White Bishop
-        'WN': '♘',  # White Knight
-        'WP': '♙',  # White Pawn
-        
-        # Black pieces
-        'BK': '♚',  # Black King
-        'BQ': '♛',  # Black Queen
-        'BR': '♜',  # Black Rook
-        'BB': '♝',  # Black Bishop
-        'BN': '♞',  # Black Knight
-        'BP': '♟',  # Black Pawn
-    }
-    
-    return piece_symbols.get(piece_code, '')
 
 def load_piece_images(pieces_folder="2d_chess_pieces_images"):
     """
@@ -243,24 +212,16 @@ def draw_chess_board(board=None, title="Chess Starting Position", save_path=None
             # Add piece if present
             piece_code = board[row, col]
             if piece_code:
-                if piece_images and piece_code in piece_images:
-                    # Use custom piece image (now pre-resized to 128x128)
-                    piece_img = piece_images[piece_code]
-                    
-                    # Create OffsetImage with simple scaling
-                    imagebox = OffsetImage(piece_img, zoom=piece_scale * 0.6)
-                    
-                    # Position at square center
-                    ab = AnnotationBbox(imagebox, (col + 0.5, 7-row + 0.5), 
-                                      frameon=False, pad=0, box_alignment=(0.5, 0.5))
-                    ax.add_artist(ab)
-                else:
-                    # Fallback to Unicode symbols
-                    piece_symbol = get_piece_unicode(piece_code)
-                    ax.text(col + 0.5, 7-row + 0.5, piece_symbol, 
-                           fontsize=36, ha='center', va='center',
-                           color='black' if piece_code.startswith('B') else 'white',
-                           weight='bold')
+                # Use custom piece image (now pre-resized to 128x128)
+                piece_img = piece_images[piece_code]
+                
+                # Create OffsetImage with simple scaling
+                imagebox = OffsetImage(piece_img, zoom=piece_scale * 0.6)
+                
+                # Position at square center
+                ab = AnnotationBbox(imagebox, (col + 0.5, 7-row + 0.5), 
+                                  frameon=False, pad=0, box_alignment=(0.5, 0.5))
+                ax.add_artist(ab)
     
     # Add file labels (a-h)
     files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -354,44 +315,6 @@ def demo_different_positions():
     endgame_board = create_custom_board_from_pieces(endgame_pieces)
     draw_chess_board(endgame_board, title="Queen vs King Endgame")
 
-def print_board_ascii(board=None):
-    """Print ASCII representation of the board"""
-    
-    if board is None:
-        board = create_chess_board_layout()
-    
-    print("\n" + "="*33)
-    print("ASCII Chess Board Representation")
-    print("="*33)
-    
-    # Top border with file labels
-    print("    a b c d e f g h")
-    print("  ┌─┬─┬─┬─┬─┬─┬─┬─┐")
-    
-    for row in range(8):
-        rank = 8 - row
-        row_str = f"{rank} │"
-        
-        for col in range(8):
-            piece_code = board[row, col]
-            if piece_code:
-                symbol = get_piece_unicode(piece_code)
-            else:
-                # Empty square - show alternating pattern
-                is_light = (row + col) % 2 == 0
-                symbol = '·' if is_light else '□'
-            
-            row_str += symbol + "│"
-        
-        row_str += f" {rank}"
-        print(row_str)
-        
-        if row < 7:
-            print("  ├─┼─┼─┼─┼─┼─┼─┼─┤")
-    
-    print("  └─┴─┴─┴─┴─┴─┴─┴─┘")
-    print("    a b c d e f g h")
-
 def setup_piece_images_folder():
     """Check user's existing piece images folder"""
     pieces_folder = "2d_chess_pieces_images"
@@ -453,7 +376,6 @@ if __name__ == "__main__":
             demo_different_positions()
     else:
         print("\n📋 Creating chess board with Unicode symbols (fallback)...")
-        print_board_ascii()
         
         # Create board without custom images
         draw_chess_board(save_path="chess_starting_position_unicode.png")

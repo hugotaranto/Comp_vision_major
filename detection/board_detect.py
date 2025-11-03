@@ -4,11 +4,9 @@ import cv2
 
 from sklearn.cluster import AgglomerativeClustering
 
-from util import *
-from plots import *
+from .util import *
+from .plots import *
 
-# IMAGE_DIR = './images'
-# IMAGE_DIR = '../images'
 IMAGE_DIR = '../side_test'
 
 # LOWER_GREEN_HSV_THRESHOLD = [35, 85, 45]

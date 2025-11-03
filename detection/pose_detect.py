@@ -6,7 +6,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-def detect_poses(segmentation_mask, corners, show=False, show_each=False, image=None):
+from Piece_Labeling_and_Classification.colour_detect import get_piece_colour
+
+def detect_poses(segmentation_mask, corners, image, show=False, show_each=False):
     corners = np.array(corners, dtype=np.float32)
 
     # Destination points for top-down view
@@ -23,12 +25,10 @@ def detect_poses(segmentation_mask, corners, show=False, show_each=False, image=
     warped_mask = cv2.warpPerspective(segmentation_mask, M, (board_size, board_size), flags=cv2.INTER_NEAREST)
     square_size = board_size // 8
     board = np.zeros((8, 8), dtype=int)
+    board_colours = np.full((8, 8), '', dtype=object)
 
     # If requested, warp the original image
-    warped_image = None
-    if image is not None:
-        warped_image = cv2.warpPerspective(image, M, (board_size, board_size))
-
+    warped_image = cv2.warpPerspective(image, M, (board_size, board_size))
 
     # ---- Process each piece ----
     piece_ids = np.unique(warped_mask)
@@ -51,6 +51,11 @@ def detect_poses(segmentation_mask, corners, show=False, show_each=False, image=
         squares, counts = np.unique(np.stack([square_rows, square_cols], axis=1), axis=0, return_counts=True)
         r, c = squares[np.argmax(counts)]
         board[r, c] = piece_id
+
+        # detect the piece colour
+        piece_mask = (warped_mask == piece_id).astype(np.uint8)
+        colour = get_piece_colour(warped_image, piece_mask)
+        board_colours[r, c] = colour
 
         # ---- If show_each, visualize this piece’s bottom half ----
         if show_each and warped_image is not None:
@@ -108,5 +113,5 @@ def detect_poses(segmentation_mask, corners, show=False, show_each=False, image=
         plt.axis("off")
         plt.show()
 
-    return board
+    return board, board_colours
 

@@ -2,17 +2,15 @@ import numpy as np
 import open3d as o3d
 import cv2
 import matplotlib.pyplot as plt
-import os
 
 import torch
 from segment_anything import sam_model_registry, SamPredictor
 
 # file imports
-from plots import *
-from util import *
-from board_detect import get_board_area
-from depth import depth_predict, load_model
-from pose_detect import detect_poses
+from .plots import *
+from .util import *
+from .board_detect import get_board_area
+from .depth import depth_predict, load_model
 
 from scipy.ndimage import maximum_filter, label
 
@@ -456,6 +454,42 @@ def load_sam(sam_path):
 
     return predictor
 
+def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform):
+
+    print("getting board mask")
+    corners = get_board_area(image, show=False, show_detail=False)
+
+    # expand the corners out slightly
+    expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
+
+    image_resized, corners = resize_image(image, MAX_DIM, expanded_corners, corners, show=False)
+
+    print("predicting depth")
+    depth = depth_predict(image_resized, f_px, depth_model, depth_transform)
+    print("depth prediction done")
+
+    print("getting plane model using ransac")
+    plane_model, inliers = segment_board_plane(depth, None)
+
+    print("detecting pieces")
+    centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
+
+    print("Segmenting with SAM")
+    segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=True, show_final=False)
+
+    # detect_poses(segmentation_mask, corners, show=True, image=image_resized, show_each=True)
+
+    # plot_segmentation_mask(image_resized, segmentation_mask)
+
+    # pad the images to target before saving
+    final_image = pad_to_target(image_resized, MAX_DIM)
+    segmentation_mask = pad_to_target(segmentation_mask, MAX_DIM)
+    
+    # save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
+
+    return segmentation_mask, final_image, corners
+
+
 def main():
 
     images, f_pxs, names = load_images(IMAGE_DIRECTORY)
@@ -471,36 +505,9 @@ def main():
         f_px = f_pxs[i]
         name = names[i]
 
-        print("getting board mask")
-        corners = get_board_area(image, show=False, show_detail=False)
+        segmentation_mask, image_resized = get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform)
 
-        # expand the corners out slightly
-        expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
-
-        image_resized, corners = resize_image(image, MAX_DIM, expanded_corners, corners, show=False)
-
-        print("predicting depth")
-        depth = depth_predict(image_resized, f_px, depth_model, depth_transform)
-        print("depth prediction done")
-
-        print("getting plane model using ransac")
-        plane_model, inliers = segment_board_plane(depth, None)
-
-        print("detecting pieces")
-        centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
-
-        print("Segmenting with SAM")
-        segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
-
-        # detect_poses(segmentation_mask, corners, show=True, image=image_resized, show_each=True)
-
-        # plot_segmentation_mask(image_resized, segmentation_mask)
-
-        # pad the images to target before saving
-        final_image = pad_to_target(image_resized, MAX_DIM)
-        segmentation_mask = pad_to_target(segmentation_mask, MAX_DIM)
-
-        save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
+        plot_segmentation_mask(image_resized, segmentation_mask)
 
 if __name__ == "__main__":
     main()
