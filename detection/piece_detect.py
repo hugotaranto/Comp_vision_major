@@ -12,11 +12,12 @@ from plots import *
 from util import *
 from board_detect import get_board_area
 from depth import depth_predict, load_model
+from pose_detect import detect_poses
 
 from scipy.ndimage import maximum_filter, label
 
-# IMAGE_DIRECTORY = '../side_test'
-IMAGE_DIRECTORY = '../images'
+IMAGE_DIRECTORY = '../side_test'
+# IMAGE_DIRECTORY = '../images'
 # DEPTH_MAP_DIRECTORY = './our_depths'
 # DEPTH_MAP_DIRECTORY = './margold_depth/depth_npy'
 
@@ -482,7 +483,6 @@ def main():
         depth = depth_predict(image_resized, f_px, depth_model, depth_transform)
         print("depth prediction done")
 
-
         print("getting plane model using ransac")
         plane_model, inliers = segment_board_plane(depth, None)
 
@@ -491,6 +491,8 @@ def main():
 
         print("Segmenting with SAM")
         segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
+
+        # detect_poses(segmentation_mask, corners, show=True, image=image_resized, show_each=True)
 
         # plot_segmentation_mask(image_resized, segmentation_mask)
 

@@ -256,7 +256,7 @@ def get_board_area(image, show=False, show_detail=False):
     if (show_detail or show) and image is not None:
         vis_corners = image.copy()
         for i, (x, y) in enumerate(corners):
-            cv2.circle(vis_corners, (int(x), int(y)), 20, (0,0,255), -1)
+            cv2.circle(vis_corners, (int(x), int(y)), 80, (0,0,255), -1)
             cv2.putText(vis_corners, f"{i+1}", (int(x)+5,int(y)-5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
 
@@ -279,8 +279,8 @@ if __name__ == "__main__":
     images, _, _ = load_images(IMAGE_DIR)
 
     for image in images:
-        get_board_area(image, show_detail=True)
-        # get_board_area(image, show=True)
+        # get_board_area(image, show_detail=True)
+        get_board_area(image, show=True)
         # threshold_util(np.array([image]), [35, 55, 40, 85, 255, 255])
 
 
