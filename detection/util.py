@@ -92,7 +92,7 @@ def load_images(file_path):
 
         images.append(image)
         f_pxs.append(f_px)
-        names.append(name)
+        names.append(os.path.splitext(name)[0])
 
 
     return images, f_pxs, names

@@ -129,7 +129,6 @@ def get_board_area(image, show=False, show_detail=False):
     lines_group0 = lines[labels == 0]
     lines_group1 = lines[labels == 1]
 
-
     # Determine which group is vertical and which is horizontal
     mean_angle0 = np.mean(np.abs(np.sin([np.arctan2(y2-y1, x2-x1) for x1,y1,x2,y2 in lines_group0[:,0]])))
     mean_angle1 = np.mean(np.abs(np.sin([np.arctan2(y2-y1, x2-x1) for x1,y1,x2,y2 in lines_group1[:,0]])))
@@ -169,13 +168,13 @@ def get_board_area(image, show=False, show_detail=False):
 
     # For verticals
     vertical_mean_x = vertical_lines[:, 0, [0, 2]].mean(axis=1)
-    left_line_pts  = average_extremal_lines(vertical_lines, vertical_mean_x, n=2, side='left')
-    right_line_pts = average_extremal_lines(vertical_lines, vertical_mean_x, n=2, side='right')
+    left_line_pts  = average_extremal_lines(vertical_lines, vertical_mean_x, n=1, side='left')
+    right_line_pts = average_extremal_lines(vertical_lines, vertical_mean_x, n=1, side='right')
 
     # For horizontals
     horizontal_mean_y = horizontal_lines[:, 0, [1, 3]].mean(axis=1)
-    top_line_pts    = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=2, side='top')
-    bottom_line_pts = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=2, side='bottom')
+    top_line_pts    = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=1, side='top')
+    bottom_line_pts = average_extremal_lines(horizontal_lines, horizontal_mean_y, n=1, side='bottom')
 
     if show_detail:
         show_lines_with_midpoints(image, right_line_pts, color=(255,0,0))

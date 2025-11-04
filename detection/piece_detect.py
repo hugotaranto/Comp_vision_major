@@ -7,26 +7,27 @@ import torch
 from segment_anything import sam_model_registry, SamPredictor
 
 # file imports
-from .plots import *
-from .util import *
-from .board_detect import get_board_area
-from .depth import depth_predict, load_model
+from detection.plots import *
+from detection.util import *
+from detection.board_detect import get_board_area
+# from .depth import depth_predict, load_model
+from detection.depth import depth_predict, load_model
 
-from scipy.ndimage import maximum_filter, label
 
-IMAGE_DIRECTORY = '../side_test'
+IMAGE_DIRECTORY = './final_images'
+# IMAGE_DIRECTORY = './side_test'
 # IMAGE_DIRECTORY = '../images'
 # DEPTH_MAP_DIRECTORY = './our_depths'
 # DEPTH_MAP_DIRECTORY = './margold_depth/depth_npy'
 
 # save directory
-MASK_OUTPUT_DIRECTORY = './detection_output'
+MASK_OUTPUT_DIRECTORY = './detection/detection_output'
 
 SAM_MODEL_TYPE = 'vit_l'
-SAM_MODEL_PATH = '../sam_checkpoints/sam_vit_l_0b3195.pth'
+SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
 
 
-DEPTH_PRO_CHECKPOINT_PATH = '../ml-depth-pro/checkpoints/depth_pro.pt'
+DEPTH_PRO_CHECKPOINT_PATH = './ml-depth-pro/checkpoints/depth_pro.pt'
 
 MAX_DIM = 1600
 
@@ -97,13 +98,25 @@ def get_central_points(piece_mask, K=3):
     return points
 
 
-def refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5):
+def refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5, expand_top_px=50):
 
     refined_mask = np.zeros_like(mask, dtype=np.uint8)
 
+    # --- Move only the top corners upward ---
+    expanded_corners = corners.copy()
+
+    # Find which corners are "top" based on smallest y values
+    y_values = corners[:, 1]
+    top_indices = np.argsort(y_values)[:2]  # two smallest y-values = top edge
+
+    # Move those points upward (subtract from y)
+    expanded_corners[top_indices, 1] -= expand_top_px
+
+    expanded_corners = expanded_corners.astype(np.int32)
+
     # Create a mask of the polygon defined by the corners
     board_mask = np.zeros_like(mask, dtype=np.uint8)
-    cv2.fillPoly(board_mask, [corners.astype(np.int32)], 1)
+    cv2.fillPoly(board_mask, [expanded_corners.astype(np.int32)], 1)
     board_mask_bool = board_mask.astype(bool)
 
     num_labels, labels = cv2.connectedComponents(mask)
@@ -143,7 +156,7 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
     threshold = median_h - k*mad
     mask = (height_residual < threshold).astype(np.uint8)
 
-    refined_mask = refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.6)
+    refined_mask = refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.7)
 
     kernel = np.ones((3, 3), np.uint8)
     refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=4)
@@ -315,9 +328,11 @@ def segment_with_sam(image, centroids, predictor, show_each=False, show_final=Fa
             # remove speckles
             m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8), iterations = 1)
             m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8), iterations = 1)
-            # plot_segment(image, m, pos_points, neg_points, score)
 
-            if score < 0.85:
+            if show_each:
+                plot_segment(image, m, pos_points, neg_points, score)
+
+            if score < 0.88:
                 print("score too low")
                 continue
 
@@ -456,6 +471,8 @@ def load_sam(sam_path):
 
 def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform):
 
+    print(f"Finding Pieces in image: {name}")
+
     print("getting board mask")
     corners = get_board_area(image, show=False, show_detail=False)
 
@@ -475,7 +492,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
 
     print("Segmenting with SAM")
-    segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=True, show_final=False)
+    segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
 
     # detect_poses(segmentation_mask, corners, show=True, image=image_resized, show_each=True)
 
@@ -485,7 +502,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     final_image = pad_to_target(image_resized, MAX_DIM)
     segmentation_mask = pad_to_target(segmentation_mask, MAX_DIM)
     
-    # save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
+    save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
 
     return segmentation_mask, final_image, corners
 
@@ -505,9 +522,9 @@ def main():
         f_px = f_pxs[i]
         name = names[i]
 
-        segmentation_mask, image_resized = get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform)
+        segmentation_mask, image_resized, corners = get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform)
 
-        plot_segmentation_mask(image_resized, segmentation_mask)
+        # plot_segmentation_mask(image_resized, segmentation_mask)
 
 if __name__ == "__main__":
     main()

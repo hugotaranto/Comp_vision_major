@@ -20,22 +20,6 @@ CLASSIFIER_MODEL_PATH = './Piece_Labeling_and_Classification/semantic_chess_clas
 
 MAX_DIM = 1600
 
-
-        # 'WK': 'king.png',
-        # 'WQ': 'queen.png', 
-        # 'WR': 'rook.png',
-        # 'WB': 'bishop.png',
-        # 'WN': 'knight.png',
-        # 'WP': 'pawn.png',
-        # 
-        # # Black pieces (with 'b' prefix)
-        # 'BK': 'bking.png',
-        # 'BQ': 'bqueen.png',
-        # 'BR': 'brook.png', 
-        # 'BB': 'bbishop.png',
-        # 'BN': 'bknight.png',
-        # 'BP': 'bpawn.png'
-
 piece_translate = {
     'rook': 'R',
     'pawn': 'P',
@@ -44,6 +28,25 @@ piece_translate = {
     'knight': 'N',
     'bishop': 'B'
 }
+
+def plot_board_and_image(board_image, image):
+
+    # Ensure both are the same height for consistent display
+    h = min(board_image.shape[0], image.shape[0])
+    board_resized = cv2.resize(board_image, (int(board_image.shape[1] * h / board_image.shape[0]), h))
+    image_resized = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+                               (int(image.shape[1] * h / image.shape[0]), h))
+
+    # Combine side by side
+    combined = np.hstack((image_resized, board_resized))
+
+    # Plot side by side
+    plt.figure(figsize=(14, 7))
+    plt.imshow(combined)
+    plt.axis("off")
+    plt.title("Detected Board vs Rendered Chess Board", fontsize=16, weight="bold")
+    plt.show()
+
 
 def main():
     images, f_pxs, names = load_images(IMAGE_DIRECTORY)
@@ -63,7 +66,7 @@ def main():
 
         # plot_segmentation_mask(image_resized, segmentation_mask)
 
-        board, board_colours = detect_poses(segmentation_mask, corners, show=True, show_each=False, image=image_resized)
+        board, board_colours = detect_poses(segmentation_mask, corners, show=False, show_each=False, image=image_resized)
 
         print("Classifying pieces")
         pred = predict_pieces_from_semantic(segmentation_mask, CLASSIFIER_MODEL_PATH)
@@ -79,11 +82,10 @@ def main():
                     piece_type = pred[piece_id]['type']  # e.g., 'K', 'Q', etc.
                     labelled_board[r, c] = f"{colour}{piece_translate[piece_type]}"
 
-        draw_chess_board(labelled_board)
+        board_image = draw_chess_board(labelled_board)
 
-        # go through the pieces and 
+        plot_board_and_image(board_image, image_resized)
 
-    
 
 if __name__ == "__main__":
     main()
