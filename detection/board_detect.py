@@ -84,7 +84,7 @@ def get_board_area(image, show=False, show_detail=False):
         plt.show()
 
     # --- Step 3: Hough line detection ---
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=70 , minLineLength=150, maxLineGap=1000)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=60 , minLineLength=50, maxLineGap=1000)
     if lines is None:
         print("No lines detected.")
         return np.zeros(mask_gray.shape, dtype=np.uint8), None

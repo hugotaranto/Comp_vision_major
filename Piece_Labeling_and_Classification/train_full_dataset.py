@@ -34,7 +34,7 @@ def train_full_dataset_classifier():
     print("Training on 100% of available data for live demo...")
     
     # Set paths
-    dataset_path = "final_chess_dataset"
+    dataset_path = "./new_dataset"
     labels_file = os.path.join(dataset_path, 'labels.csv')
     
     if not os.path.exists(labels_file):
@@ -189,7 +189,7 @@ def train_full_dataset_classifier():
     print(f"   Piece types: {unique_pieces}")
     
     # Save the full model
-    model_filename = f'Final_Chess_Classifier.pkl'
+    model_filename = f'classifier_on_new_data.pkl'
     
     model_data = {
         'classifier': final_classifier,

@@ -14,7 +14,7 @@ from detection.board_detect import get_board_area
 from detection.depth import depth_predict, load_model
 
 
-IMAGE_DIRECTORY = './final_images'
+IMAGE_DIRECTORY = './every_place'
 # IMAGE_DIRECTORY = './side_test'
 # IMAGE_DIRECTORY = '../images'
 # DEPTH_MAP_DIRECTORY = './our_depths'
@@ -97,6 +97,20 @@ def get_central_points(piece_mask, K=3):
 
     return points
 
+def get_most_central_point(piece_mask):
+    if piece_mask.dtype != np.uint8:
+        piece_mask = piece_mask.astype(np.uint8)
+
+    # Compute distance transform
+    dist = cv2.distanceTransform(piece_mask, cv2.DIST_L1, 3)
+
+    # Find the maximum value location (most central point)
+    _, _, _, max_loc = cv2.minMaxLoc(dist)
+
+    x_best, y_best = max_loc
+
+    return (x_best, y_best)
+
 
 def refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5, expand_top_px=50):
 
@@ -156,15 +170,15 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
     threshold = median_h - k*mad
     mask = (height_residual < threshold).astype(np.uint8)
 
-    refined_mask = refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.7)
+    refined_mask = refine_mask_by_residual(mask, height_residual, corners, keep_fraction=0.5)
+    refined_mask = refine_mask_by_residual(refined_mask, height_residual, corners, keep_fraction=0.65)
 
-    kernel = np.ones((3, 3), np.uint8)
-    refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=4)
+    kernel = np.ones((6, 6), np.uint8)
+    refined_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_CLOSE, kernel, iterations=5)
 
     # erode the mask to separate pieces
-    kernel = np.ones((3,3), np.uint8)
     # eroded_mask = cv2.erode(refined_mask, kernel, iterations=2)
-    eroded_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=8)
+    eroded_mask = cv2.morphologyEx(refined_mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=5)
     # eroded_mask = cv2.morphologyEx(eroded_mask, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
 
 
@@ -192,10 +206,12 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
         # Extract mask for this component
         piece_mask = (labels[y:y+h, x:x+w] == i).astype(np.uint8)
 
-        points = get_central_points(piece_mask, K=1)
+        # points = get_central_points(piece_mask, K=1)
+        point = get_most_central_point(piece_mask)
 
         # Shift local points to global image coordinates
-        global_points = [(x + px, y + py) for (px, py) in points]
+        # global_points = [(x + px, y + py) for (px, py) in points]
+        global_points = [(x + point[0], y + point[1])]
 
         valid_centroids.append(global_points)
 
@@ -222,8 +238,14 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
         axes[1, 2].imshow(refined_mask, cmap='gray')
         axes[1, 2].set_title("Refined Mask")
 
+        # axes[2, 0].imshow(eroded_mask, cmap='gray')
+        # axes[2, 0].set_title("Eroded Mask")
+        # --- Plot eroded mask with centroids ---
         axes[2, 0].imshow(eroded_mask, cmap='gray')
-        axes[2, 0].set_title("Eroded Mask")
+        axes[2, 0].set_title("Eroded Mask + Centroids")
+        for global_points in valid_centroids:
+            for (gx, gy) in global_points:
+                axes[2, 0].plot(gx, gy, 'ro', markersize=2)
 
         axes[2, 1].imshow(display_image[..., ::-1])
         axes[2, 1].set_title(f"Detected pieces ({num_labels-1})")
@@ -474,7 +496,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     print(f"Finding Pieces in image: {name}")
 
     print("getting board mask")
-    corners = get_board_area(image, show=True, show_detail=False)
+    corners = get_board_area(image, show=False, show_detail=False)
 
     # expand the corners out slightly
     expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
@@ -489,7 +511,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     plane_model, inliers = segment_board_plane(depth, None)
 
     print("detecting pieces")
-    centroids = detect_pieces(image_resized, depth, plane_model, corners, show=False)
+    centroids = detect_pieces(image_resized, depth, plane_model, corners, show=True)
 
     print("Segmenting with SAM")
     segmentation_mask, piece_masks = segment_with_sam(image_resized, centroids, sam_predictor, show_each=False, show_final=False)
@@ -502,7 +524,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     final_image = pad_to_target(image_resized, MAX_DIM)
     segmentation_mask, corners = pad_to_target(segmentation_mask, MAX_DIM, corners)
     
-    # save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
+    save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
 
     return segmentation_mask, final_image, corners
 

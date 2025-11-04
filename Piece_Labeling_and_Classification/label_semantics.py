@@ -703,7 +703,7 @@ def edit_existing_labels(dataset_path):
 def main():
     """Main entry point"""
     # Default dataset path
-    dataset_path = "final_chess_dataset"
+    dataset_path = "../detection/detection_output"
     
     if not os.path.exists(dataset_path):
         print(f"❌ Dataset folder not found: {dataset_path}")
