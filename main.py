@@ -8,7 +8,7 @@ from Piece_Labeling_and_Classification.inference import predict_pieces_from_sema
 from chess_board_reconstructor import draw_chess_board
 
 
-IMAGE_DIRECTORY = './side_test'
+IMAGE_DIRECTORY = './test_images'
 MASK_OUTPUT_DIRECTORY = './detection/detection_output'
 
 SAM_MODEL_TYPE = 'vit_l'
@@ -16,7 +16,7 @@ SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
 
 DEPTH_PRO_CHECKPOINT_PATH = './ml-depth-pro/checkpoints/depth_pro.pt'
 
-CLASSIFIER_MODEL_PATH = './Piece_Labeling_and_Classification/semantic_chess_classifier.pkl'
+CLASSIFIER_MODEL_PATH = './Piece_Labeling_and_Classification/Final_Chess_Classifier.pkl'
 
 MAX_DIM = 1600
 
@@ -66,7 +66,7 @@ def main():
 
         # plot_segmentation_mask(image_resized, segmentation_mask)
 
-        board, board_colours = detect_poses(segmentation_mask, corners, show=False, show_each=False, image=image_resized)
+        board, board_colours = detect_poses(segmentation_mask, corners, show=True, show_each=False, image=image_resized)
 
         print("Classifying pieces")
         pred = predict_pieces_from_semantic(segmentation_mask, CLASSIFIER_MODEL_PATH)

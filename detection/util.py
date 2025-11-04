@@ -49,7 +49,8 @@ def resize_image(image, target_w, expanded_corners, corners, show=False):
     return resized, resized_board_corners
 
 
-def pad_to_target(image, target_w, pad_value=0, board_corners=None):
+def pad_to_target(image, target_w, corners=None, pad_value=0):
+
     target_h = round(target_w * 3 / 4)
     h, w = image.shape[:2]
 
@@ -69,8 +70,8 @@ def pad_to_target(image, target_w, pad_value=0, board_corners=None):
         borderType=cv2.BORDER_CONSTANT, value=value
     )
 
-    if board_corners is not None:
-        padded_board_corners = board_corners + np.array([pad_left, pad_top])
+    if corners is not None:
+        padded_board_corners = corners + np.array([pad_left, pad_top])
         return padded_image, padded_board_corners
 
     return padded_image

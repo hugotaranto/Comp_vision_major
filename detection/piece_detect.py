@@ -474,7 +474,7 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     print(f"Finding Pieces in image: {name}")
 
     print("getting board mask")
-    corners = get_board_area(image, show=False, show_detail=False)
+    corners = get_board_area(image, show=True, show_detail=False)
 
     # expand the corners out slightly
     expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
@@ -500,9 +500,9 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
 
     # pad the images to target before saving
     final_image = pad_to_target(image_resized, MAX_DIM)
-    segmentation_mask = pad_to_target(segmentation_mask, MAX_DIM)
+    segmentation_mask, corners = pad_to_target(segmentation_mask, MAX_DIM, corners)
     
-    save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
+    # save_segmentations_to_file(MASK_OUTPUT_DIRECTORY, name, segmentation_mask, final_image)
 
     return segmentation_mask, final_image, corners
 

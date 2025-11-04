@@ -12,7 +12,7 @@ import pickle
 import os
 
 # Import the feature extraction function
-from train_semantic_from_labeled import extract_geometric_features
+from .train_semantic_from_labeled import extract_geometric_features
 
 def predict_pieces_from_semantic(semantic_mask, model_path='semantic_chess_classifier.pkl', 
                                piece_value_range=(1, 50), return_details=False):
