@@ -279,18 +279,67 @@ def load_labeled_data(dataset_path):
     
     return X, y, image_info
 
-def train_classifiers(X, y):
+def train_classifiers(X, y, image_info):
     """Train multiple classifiers and return the best one"""
     
     print(f"\n🔄 Training classifiers on {len(X)} samples...")
     
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    # Separate original data from detection_output data
+    original_indices = []
+    detection_indices = []
     
-    print(f"   Training set: {len(X_train)} samples")
-    print(f"   Test set: {len(X_test)} samples")
+    for i, info in enumerate(image_info):
+        if 'detection_output' in info['semantic_path']:
+            detection_indices.append(i)
+        else:
+            original_indices.append(i)
+    
+    print(f"   Original data: {len(original_indices)} samples")
+    print(f"   Detection output data: {len(detection_indices)} samples")
+    
+    # Convert to numpy arrays for indexing
+    X = np.array(X)
+    y = np.array(y)
+    
+    if len(original_indices) > 0:
+        # Split only the original data 80/20
+        X_original = X[original_indices]
+        y_original = y[original_indices]
+        
+        X_orig_train, X_orig_test, y_orig_train, y_orig_test = train_test_split(
+            X_original, y_original, test_size=0.2, random_state=42, stratify=y_original
+        )
+        
+        # Add ALL detection_output data to training set
+        if len(detection_indices) > 0:
+            X_detection = X[detection_indices]
+            y_detection = y[detection_indices]
+            
+            X_train = np.vstack([X_orig_train, X_detection])
+            y_train = np.hstack([y_orig_train, y_detection])
+        else:
+            X_train = X_orig_train
+            y_train = y_orig_train
+        
+        # Test set contains only original data
+        X_test = X_orig_test
+        y_test = y_orig_test
+        
+    else:
+        # If no original data, use detection_output for both (shouldn't happen)
+        print("⚠️  Warning: No original data found, using detection_output for train/test split")
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
+    
+    print(f"   Final training set: {len(X_train)} samples (includes {len(detection_indices)} detection_output)")
+    print(f"   Final test set: {len(X_test)} samples (original data only)")
+    
+    # Verify detection_output data is only in training
+    detection_in_test = sum(1 for i in range(len(X_test)) if any(
+        np.array_equal(X_test[i], X[j]) for j in detection_indices
+    ))
+    print(f"   ✓ Detection_output samples in test set: {detection_in_test} (should be 0)")
     
     # Scale features
     scaler = StandardScaler()
@@ -435,7 +484,7 @@ def main():
         print("Consider labeling more data for reliable training.")
     
     # Train classifiers
-    classifier, scaler, model_name, accuracy = train_classifiers(X, y)
+    classifier, scaler, model_name, accuracy = train_classifiers(X, y, image_info)
     
     # Save model
     if classifier is not None:
