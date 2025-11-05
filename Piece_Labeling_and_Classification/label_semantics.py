@@ -181,7 +181,7 @@ def organize_training_data(dataset_path):
         target_folder = os.path.join(training_path, subfolder)
         
         if not os.path.exists(source_folder):
-            print(f"   ⚠️  Source folder not found: {source_folder}")
+            print(f"     Source folder not found: {source_folder}")
             continue
         
         # Create target folder if it doesn't exist
@@ -192,10 +192,10 @@ def organize_training_data(dataset_path):
                 if os.path.isfile(os.path.join(source_folder, f))]
         
         if not files:
-            print(f"   📂 {subfolder}/: No files to move")
+            print(f"    {subfolder}/: No files to move")
             continue
         
-        print(f"   📂 {subfolder}/: Moving {len(files)} files...")
+        print(f"    {subfolder}/: Moving {len(files)} files...")
         
         # Move each file
         moved_count = 0
@@ -212,15 +212,15 @@ def organize_training_data(dataset_path):
                     new_name = f"{base_name}_{counter}{ext}"
                     target_file = os.path.join(target_folder, new_name)
                     counter += 1
-                print(f"      ⚠️  Renamed {file} to {os.path.basename(target_file)} (file existed)")
+                print(f"        Renamed {file} to {os.path.basename(target_file)} (file existed)")
             
             try:
                 shutil.move(source_file, target_file)
                 moved_count += 1
             except Exception as e:
-                print(f"      ❌ Error moving {file}: {e}")
+                print(f"       Error moving {file}: {e}")
         
-        print(f"      ✅ Moved {moved_count}/{len(files)} files")
+        print(f"       Moved {moved_count}/{len(files)} files")
     
     # Remove empty training_example folder structure if all files moved
     try:
@@ -238,9 +238,9 @@ def organize_training_data(dataset_path):
         else:
             print(f"   📁 Kept training_example folder (some files remain)")
     except Exception as e:
-        print(f"   ⚠️  Could not remove training_example folder: {e}")
+        print(f"     Could not remove training_example folder: {e}")
     
-    print("✅ Training data organization complete!")
+    print(" Training data organization complete!")
 
 def scan_and_label_semantics(dataset_path):
     """Main function to scan and label semantic pieces"""
@@ -280,14 +280,14 @@ def scan_and_label_semantics(dataset_path):
             # Load semantic image
             semantic_img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
             if semantic_img is None:
-                print(f"⚠️  Could not load {img_file}")
+                print(f"  Could not load {img_file}")
                 continue
             
             # Get unique piece values (excluding background)
             unique_values = np.unique(semantic_img)
             piece_values = [v for v in unique_values if v != 0 and v < 50]  # Assuming piece values are < 50
             
-            print(f"\n📁 Image: {img_file}")
+            print(f"\n Image: {img_file}")
             print(f"   Found {len(piece_values)} pieces: {piece_values}")
             
             # Find corresponding original image
@@ -335,13 +335,13 @@ def scan_and_label_semantics(dataset_path):
                                 labels_df = labels_df.iloc[:-1]  # Remove last row
                                 labeled_pieces.discard((last_label['image_name'], last_label['piece_value']))
                                 save_labels(labels_df, labels_file)
-                                print("✅ Last label removed")
+                                print(" Last label removed")
                             else:
                                 print("No labels to undo")
                             break
                         
                         elif user_input in ['edit', 'e']:  # Edit existing labels
-                            print("\n📝 Recent labels:")
+                            print("\n Recent labels:")
                             if len(labels_df) >= 5:
                                 recent = labels_df.tail(5)
                             else:
@@ -363,7 +363,7 @@ def scan_and_label_semantics(dataset_path):
                                         if new_type in PIECE_CODES:
                                             labels_df.at[original_idx, 'piece_type'] = PIECE_CODES[new_type]
                                             save_labels(labels_df, labels_file)
-                                            print(f"✅ Updated to {PIECE_CODES[new_type]}")
+                                            print(f" Updated to {PIECE_CODES[new_type]}")
                                         else:
                                             print("Invalid piece type")
                                     else:
@@ -429,13 +429,13 @@ def scan_and_label_semantics(dataset_path):
     save_labels(labels_df, labels_file)
     plt.close('all')
     
-    print(f"\n🎉 Labeling complete!")
+    print(f"\n Labeling complete!")
     print(f"   Total labeled: {total_labeled}")
     print(f"   Total skipped: {total_skipped}")
     
     # Show summary
     if len(labels_df) > 0:
-        print(f"\n📊 Label Summary:")
+        print(f"\n Label Summary:")
         summary = labels_df['piece_type'].value_counts()
         for piece_type, count in summary.items():
             print(f"   {piece_type}: {count}")
@@ -445,24 +445,24 @@ def edit_existing_labels(dataset_path):
     labels_file = os.path.join(dataset_path, 'labels.csv')
     
     if not os.path.exists(labels_file):
-        print(f"❌ No labels file found: {labels_file}")
+        print(f" No labels file found: {labels_file}")
         return
     
     labels_df, _ = load_existing_labels(labels_file)
     
     if len(labels_df) == 0:
-        print("❌ No labels found to edit")
+        print(" No labels found to edit")
         return
     
-    print(f"\n📝 Edit Mode - Found {len(labels_df)} existing labels")
+    print(f"\n Edit Mode - Found {len(labels_df)} existing labels")
     
     while True:
-        print(f"\n📊 Current label summary:")
+        print(f"\n Current label summary:")
         summary = labels_df['piece_type'].value_counts()
         for piece_type, count in summary.items():
             print(f"   {piece_type}: {count}")
         
-        print(f"\n📝 Recent labels (last 10):")
+        print(f"\n Recent labels (last 10):")
         recent = labels_df.tail(10)
         for i, (idx, row) in enumerate(recent.iterrows()):
             print(f"   {i+1:2d}. {row['image_name'][:30]:<30} piece {row['piece_value']:2d}: {row['piece_type']}")
@@ -488,14 +488,14 @@ def edit_existing_labels(dataset_path):
                 if confirm == 'y':
                     labels_df = labels_df.iloc[:-1]
                     save_labels(labels_df, labels_file)
-                    print("✅ Label removed")
+                    print(" Label removed")
                 else:
                     print("Cancelled")
             else:
                 print("No labels to remove")
         
         elif choice == 'all':
-            print(f"\n📋 All {len(labels_df)} labels:")
+            print(f"\n All {len(labels_df)} labels:")
             for i, (idx, row) in enumerate(labels_df.iterrows()):
                 print(f"   {i+1:3d}. {row['image_name'][:25]:<25} piece {row['piece_value']:2d}: {row['piece_type']}")
             
@@ -506,7 +506,7 @@ def edit_existing_labels(dataset_path):
                 if 0 <= row_idx < len(labels_df):
                     edit_row = labels_df.iloc[row_idx]
                     
-                    print(f"\n✏️  Editing row {edit_choice}: {edit_row['image_name']} piece {edit_row['piece_value']}")
+                    print(f"\n  Editing row {edit_choice}: {edit_row['image_name']} piece {edit_row['piece_value']}")
                     print(f"   Current: {edit_row['piece_type']}")
                     print(f"   Area: {edit_row['area']:.1f} pixels")
                     
@@ -541,7 +541,7 @@ def edit_existing_labels(dataset_path):
                         old_type = edit_row['piece_type']
                         labels_df.iloc[row_idx, labels_df.columns.get_loc('piece_type')] = PIECE_CODES[new_type]
                         save_labels(labels_df, labels_file)
-                        print(f"✅ Updated row {edit_choice} from {old_type} to {PIECE_CODES[new_type]}")
+                        print(f" Updated row {edit_choice} from {old_type} to {PIECE_CODES[new_type]}")
                         # Reload the dataframe to reflect changes
                         labels_df, _ = load_existing_labels(labels_file)
                     elif new_type == "":
@@ -571,7 +571,7 @@ def edit_existing_labels(dataset_path):
                             row_idx = match_indices[match_idx]
                             edit_row = labels_df.iloc[row_idx]
                             
-                            print(f"\n✏️  Editing: {edit_row['image_name']} piece {edit_row['piece_value']}")
+                            print(f"\n  Editing: {edit_row['image_name']} piece {edit_row['piece_value']}")
                             print(f"   Current: {edit_row['piece_type']}")
                             print(f"   Area: {edit_row['area']:.1f} pixels")
                             
@@ -606,7 +606,7 @@ def edit_existing_labels(dataset_path):
                                 old_type = edit_row['piece_type']
                                 labels_df.iloc[row_idx, labels_df.columns.get_loc('piece_type')] = PIECE_CODES[new_type]
                                 save_labels(labels_df, labels_file)
-                                print(f"✅ Updated from {old_type} to {PIECE_CODES[new_type]}")
+                                print(f" Updated from {old_type} to {PIECE_CODES[new_type]}")
                                 # Reload the dataframe to reflect changes
                                 labels_df, _ = load_existing_labels(labels_file)
                             elif new_type == "":
@@ -625,7 +625,7 @@ def edit_existing_labels(dataset_path):
                 if 0 <= row_idx < len(labels_df):
                     edit_row = labels_df.iloc[row_idx]
                     
-                    print(f"\n✏️  Editing row {row_num}: {edit_row['image_name']} piece {edit_row['piece_value']}")
+                    print(f"\n  Editing row {row_num}: {edit_row['image_name']} piece {edit_row['piece_value']}")
                     print(f"   Current: {edit_row['piece_type']}")
                     print(f"   Area: {edit_row['area']:.1f} pixels")
                     
@@ -660,7 +660,7 @@ def edit_existing_labels(dataset_path):
                         old_type = edit_row['piece_type']
                         labels_df.iloc[row_idx, labels_df.columns.get_loc('piece_type')] = PIECE_CODES[new_type]
                         save_labels(labels_df, labels_file)
-                        print(f"✅ Updated row {row_num} from {old_type} to {PIECE_CODES[new_type]}")
+                        print(f" Updated row {row_num} from {old_type} to {PIECE_CODES[new_type]}")
                         # Reload the dataframe to reflect changes
                         labels_df, _ = load_existing_labels(labels_file)
                     elif new_type == "":
@@ -678,7 +678,7 @@ def edit_existing_labels(dataset_path):
                 edit_row = recent.iloc[choice_idx]
                 original_idx = edit_row.name
                 
-                print(f"\n✏️  Editing: {edit_row['image_name']} piece {edit_row['piece_value']}")
+                print(f"\n  Editing: {edit_row['image_name']} piece {edit_row['piece_value']}")
                 print(f"   Current: {edit_row['piece_type']}")
                 print(f"   Area: {edit_row['area']:.1f} pixels")
                 
@@ -687,7 +687,7 @@ def edit_existing_labels(dataset_path):
                     old_type = edit_row['piece_type']
                     labels_df.iloc[original_idx, labels_df.columns.get_loc('piece_type')] = PIECE_CODES[new_type]
                     save_labels(labels_df, labels_file)
-                    print(f"✅ Updated from {old_type} to {PIECE_CODES[new_type]}")
+                    print(f" Updated from {old_type} to {PIECE_CODES[new_type]}")
                     # Reload the dataframe to reflect changes
                     labels_df, _ = load_existing_labels(labels_file)
                 elif new_type == "":
