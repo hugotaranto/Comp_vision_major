@@ -2,7 +2,7 @@
 Interactive Semantic Piece Labeling Tool
 ========================================
 
-This tool scans the final_chess_dataset for unlabeled semantic images
+This tool scans the final_chess_dataset for unlabeled semantic images 
 and prompts the user to identify pieces by typing codes:
 - p: pawn
 - r: rook  
