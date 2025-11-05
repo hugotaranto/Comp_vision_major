@@ -706,11 +706,11 @@ def main():
     dataset_path = "../detection/detection_output"
     
     if not os.path.exists(dataset_path):
-        print(f"❌ Dataset folder not found: {dataset_path}")
+        print(f" Dataset folder not found: {dataset_path}")
         print("Please ensure the final_chess_dataset folder exists with training/ and testing/ subdirectories")
         return
     
-    print("🏷️  Interactive Semantic Piece Labeling Tool")
+    print("  Interactive Semantic Piece Labeling Tool")
     print("=" * 50)
     print(f"Scanning dataset: {dataset_path}")
     
@@ -721,7 +721,7 @@ def main():
     labels_file = os.path.join(dataset_path, 'labels.csv')
     if os.path.exists(labels_file):
         labels_df, _ = load_existing_labels(labels_file)
-        print(f"\n📊 Found {len(labels_df)} existing labels")
+        print(f"\n Found {len(labels_df)} existing labels")
         
         # Check if user wants to edit existing labels or continue labeling
         print("\nOptions:")
@@ -748,7 +748,7 @@ def main():
         scan_and_label_semantics(dataset_path)
         
         # After labeling is complete, offer edit mode
-        print("\n🎉 All pieces labeled!")
+        print("\n All pieces labeled!")
         edit_choice = input("Want to edit any labels? (y/n): ").strip().lower()
         if edit_choice == 'y':
             edit_existing_labels(dataset_path)
