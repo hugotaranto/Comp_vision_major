@@ -1,7 +1,4 @@
 """
-Semantic Chess Piece Classifier Trainer
-=======================================
-
 Trains a classifier using geometric features extracted from labeled semantic masks.
 Focuses purely on shape/geometric patterns, ignoring color information.
 """
@@ -209,21 +206,21 @@ def extract_geometric_features(semantic_img, piece_value):
     return np.array(features)
 
 def load_labeled_data(dataset_path):
-    """Load labeled semantic data and extract features"""
-    labels_file = os.path.join(dataset_path, 'labels.csv')
+    "Load labeled semantic data and extract features"
+    labels_file = os.path.join(dataset_path, 'labels_final.csv')
     
     if not os.path.exists(labels_file):
-        print(f"❌ Labels file not found: {labels_file}")
+        print(f"Labels file not found: {labels_file}")
         print("Please run label_semantics.py first to create labeled data.")
         return None, None, None
     
     # Load labels
     labels_df = pd.read_csv(labels_file)
-    print(f"✓ Loaded {len(labels_df)} labeled pieces")
+    print(f"Loaded {len(labels_df)} labeled pieces")
     
     # Group by piece type
     piece_counts = labels_df['piece_type'].value_counts()
-    print("\n📊 Labeled Data Distribution:")
+    print("\nLabeled Data Distribution:")
     for piece_type, count in piece_counts.items():
         print(f"   {piece_type}: {count}")
     
@@ -246,13 +243,13 @@ def load_labeled_data(dataset_path):
                 break
         
         if semantic_path is None:
-            print(f"⚠️  Semantic file not found: {image_name}")
+            print(f"Semantic file not found: {image_name}")
             continue
         
         # Load semantic image
         semantic_img = cv2.imread(semantic_path, cv2.IMREAD_GRAYSCALE)
         if semantic_img is None:
-            print(f"⚠️  Could not load: {semantic_path}")
+            print(f"Could not load: {semantic_path}")
             continue
         
         # Extract features
@@ -266,10 +263,10 @@ def load_labeled_data(dataset_path):
                 'semantic_path': semantic_path
             })
         else:
-            print(f"⚠️  Could not extract features for {image_name}, piece {piece_value}")
+            print(f"Could not extract features for {image_name}, piece {piece_value}")
     
     if len(X) == 0:
-        print("❌ No valid features extracted!")
+        print("No valid features extracted!")
         return None, None, None
     
     X = np.array(X)
@@ -280,9 +277,9 @@ def load_labeled_data(dataset_path):
     return X, y, image_info
 
 def train_classifiers(X, y, image_info):
-    """Train multiple classifiers and return the best one"""
-    
-    print(f"\n🔄 Training classifiers on {len(X)} samples...")
+    "Train multiple classifiers and return the best one"
+
+    print(f"\nTraining classifiers on {len(X)} samples...")
     
     # Separate original data from detection_output data
     original_indices = []
@@ -327,7 +324,7 @@ def train_classifiers(X, y, image_info):
         
     else:
         # If no original data, use detection_output for both (shouldn't happen)
-        print("⚠️  Warning: No original data found, using detection_output for train/test split")
+        print("Warning: No original data found, using detection_output for train/test split")
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42, stratify=y
         )
@@ -339,7 +336,7 @@ def train_classifiers(X, y, image_info):
     detection_in_test = sum(1 for i in range(len(X_test)) if any(
         np.array_equal(X_test[i], X[j]) for j in detection_indices
     ))
-    print(f"   ✓ Detection_output samples in test set: {detection_in_test} (should be 0)")
+    print(f"   Detection_output samples in test set: {detection_in_test} (should be 0)")
     
     # Scale features
     scaler = StandardScaler()
@@ -415,10 +412,10 @@ def train_classifiers(X, y, image_info):
             best_classifier = clf
             best_name = name
     
-    print(f"\n🏆 Best classifier: {best_name} with accuracy {best_accuracy:.4f}")
+    print(f"\nBest classifier: {best_name} with accuracy {best_accuracy:.4f}")
     
     # Show detailed results for best classifier
-    print(f"\n📈 Detailed Results for {best_name}:")
+    print(f"\nDetailed Results for {best_name}:")
     print(classification_report(results[best_name]['true_labels'], results[best_name]['predictions']))
     
     # Plot confusion matrix
@@ -436,7 +433,7 @@ def train_classifiers(X, y, image_info):
     return best_classifier, scaler, best_name, best_accuracy
 
 def save_model(classifier, scaler, model_name, accuracy, feature_count):
-    """Save the trained model"""
+    "Save the trained model"
     model_data = {
         'classifier': classifier,
         'scaler': scaler,
@@ -449,23 +446,23 @@ def save_model(classifier, scaler, model_name, accuracy, feature_count):
     model_path = 'semantic_chess_classifier.pkl'
     with open(model_path, 'wb') as f:
         pickle.dump(model_data, f)
-    
-    print(f"💾 Model saved to {model_path}")
+
+    print(f"Model saved to {model_path}")
     return model_path
 
 def main():
-    """Main training function"""
+    "Main training function"
     dataset_path = "final_chess_dataset"
     
     if not os.path.exists(dataset_path):
-        print(f"❌ Dataset folder not found: {dataset_path}")
+        print(f"Dataset folder not found: {dataset_path}")
         return
-    
-    print("🚀 Semantic Chess Piece Classifier Training")
+
+    print("Semantic Chess Piece Classifier Training")
     print("=" * 50)
     
     # Load labeled data
-    print("📂 Loading labeled data...")
+    print("Loading labeled data...")
     X, y, image_info = load_labeled_data(dataset_path)
     
     if X is None:
@@ -476,11 +473,11 @@ def main():
     min_samples = min([np.sum(y == cls) for cls in unique_classes])
     
     if min_samples < 2:
-        print(f"⚠️  Warning: Some classes have very few samples (min: {min_samples})")
+        print(f"Warning: Some classes have very few samples (min: {min_samples})")
         print("Consider labeling more data for better results.")
     
     if len(X) < 10:
-        print(f"⚠️  Warning: Very few total samples ({len(X)})")
+        print(f"Warning: Very few total samples ({len(X)})")
         print("Consider labeling more data for reliable training.")
     
     # Train classifiers
@@ -490,14 +487,14 @@ def main():
     if classifier is not None:
         model_path = save_model(classifier, scaler, model_name, accuracy, X.shape[1])
         
-        print(f"\n🎉 Training Complete!")
+        print(f"\nTraining Complete!")
         print(f"   Best Model: {model_name}")
         print(f"   Accuracy: {accuracy:.4f}")
         print(f"   Model File: {model_path}")
         print(f"   Feature Count: {X.shape[1]}")
         
         # Show detailed best model specifications
-        print(f"\n⚙️  Best Model Specifications:")
+        print(f"\nBest Model Specifications:")
         if model_name == 'Random Forest':
             print(f"   • Algorithm: Random Forest Classifier")
             print(f"   • Number of trees (n_estimators): {classifier.n_estimators}")
@@ -526,21 +523,21 @@ def main():
         
         # Show feature importance for Random Forest
         if hasattr(classifier, 'feature_importances_'):
-            print(f"\n🔍 Top 10 Most Important Features:")
+            print(f"\nTop 10 Most Important Features:")
             feature_importance = classifier.feature_importances_
             top_indices = np.argsort(feature_importance)[-10:][::-1]
             for i, idx in enumerate(top_indices):
                 print(f"   {i+1}. Feature {idx}: {feature_importance[idx]:.4f}")
         
         # Show data preprocessing info
-        print(f"\n📊 Data Processing:")
+        print(f"\nData Processing:")
         print(f"   • Feature scaling: StandardScaler (mean=0, std=1)")
         print(f"   • Train/test split: 80/20 (stratified)")
         print(f"   • Cross-validation: None (single split)")
         print(f"   • Class balancing: Automatic via class_weight='balanced'")
     
     else:
-        print("❌ Training failed!")
+        print("Training failed!")
 
 if __name__ == "__main__":
     main()

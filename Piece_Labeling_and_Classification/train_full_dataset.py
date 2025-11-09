@@ -1,7 +1,4 @@
 """
-Semantic Chess Piece Classifier Trainer - Full Dataset Version
-==============================================================
-
 Trains a classifier using 100% of available data for live demo purposes.
 No train/test split - uses all labeled data to create the best possible model.
 """
@@ -29,16 +26,16 @@ def train_full_dataset_classifier():
     """
     
     print("=" * 70)
-    print("🚀 SEMANTIC CHESS CLASSIFIER - FULL DATASET TRAINING")
+    print("SEMANTIC CHESS CLASSIFIER - FULL DATASET TRAINING")
     print("=" * 70)
     print("Training on 100% of available data for live demo...")
     
     # Set paths
     dataset_path = "./new_dataset"
-    labels_file = os.path.join(dataset_path, 'labels.csv')
+    labels_file = os.path.join(dataset_path, 'labels_final.csv')
     
     if not os.path.exists(labels_file):
-        print(f"❌ Labels file not found: {labels_file}")
+        print(f"Labels file not found: {labels_file}")
         return
     
     # Load labels
@@ -54,7 +51,7 @@ def train_full_dataset_classifier():
     
     # Group by piece type
     piece_counts = labels_df['piece_type'].value_counts()
-    print("\n📊 Full Dataset Distribution:")
+    print("\nFull Dataset Distribution:")
     for piece_type, count in piece_counts.items():
         print(f"   {piece_type}: {count}")
     
@@ -63,7 +60,7 @@ def train_full_dataset_classifier():
     y = []
     failed_extractions = 0
     
-    print(f"\n🔄 Extracting features from {len(labels_df)} pieces...")
+    print(f"\nExtracting features from {len(labels_df)} pieces...")
     
     # Process each labeled piece
     for idx, row in labels_df.iterrows():
@@ -79,14 +76,14 @@ def train_full_dataset_classifier():
                 break
         
         if semantic_path is None:
-            print(f"⚠️  Semantic file not found: {image_name}")
+            print(f"Semantic file not found: {image_name}")
             failed_extractions += 1
             continue
         
         # Load semantic image
         semantic_img = cv2.imread(semantic_path, cv2.IMREAD_GRAYSCALE)
         if semantic_img is None:
-            print(f"⚠️  Could not load: {semantic_path}")
+            print(f"Could not load: {semantic_path}")
             failed_extractions += 1
             continue
         
@@ -99,7 +96,7 @@ def train_full_dataset_classifier():
             failed_extractions += 1
     
     if failed_extractions > 0:
-        print(f"⚠️  Failed to extract features from {failed_extractions} pieces")
+        print(f"Failed to extract features from {failed_extractions} pieces")
     
     X = np.array(X)
     y = np.array(y)
@@ -108,11 +105,11 @@ def train_full_dataset_classifier():
     print(f"   Feature dimension: {X.shape[1]}")
     
     if len(X) == 0:
-        print("❌ No features extracted! Check your data.")
+        print("No features extracted! Check your data.")
         return
     
     # Scale features
-    print(f"\n⚙️  Scaling features...")
+    print(f"\nScaling features...")
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
@@ -147,7 +144,7 @@ def train_full_dataset_classifier():
     }
     
     # Evaluate classifiers using cross-validation
-    print(f"\n🔬 Evaluating classifiers using 5-fold cross-validation...")
+    print(f"\nEvaluating classifiers using 5-fold cross-validation...")
     cv_scores = {}
     
     for name, classifier in classifiers.items():
@@ -169,16 +166,16 @@ def train_full_dataset_classifier():
         print(f"      {name}: score = {score} (acc={mean_acc:.4f}, std={std_acc:.4f})")
         return score
     
-    print(f"\n🔍 Model Selection Scores:")
+    print(f"\nModel Selection Scores:")
     best_name = max(cv_scores.keys(), key=model_selection_score)
     best_classifier = classifiers[best_name]
     best_score = cv_scores[best_name]['mean']
-    
-    print(f"\n🏆 Best Classifier: {best_name}")
+
+    print(f"\nBest Classifier: {best_name}")
     print(f"   CV Accuracy: {best_score:.4f} (±{cv_scores[best_name]['std']*2:.4f})")
     
     # Train final model on ALL data
-    print(f"\n🚀 Training final model on 100% of data...")
+    print(f"\nTraining final model on 100% of data...")
     final_classifier = classifiers[best_name]
     final_classifier.fit(X_scaled, y)
     
@@ -207,11 +204,11 @@ def train_full_dataset_classifier():
     
     with open(model_filename, 'wb') as f:
         pickle.dump(model_data, f)
-    
-    print(f"\n💾 Model saved: {model_filename}")
-    
+
+    print(f"\nModel saved: {model_filename}")
+
     # Show detailed model specifications
-    print(f"\n⚙️  Final Model Specifications:")
+    print(f"\nFinal Model Specifications:")
     if hasattr(final_classifier, 'n_estimators'):
         print(f"   Algorithm: Random Forest")
         print(f"   Trees: {final_classifier.n_estimators}")
@@ -232,25 +229,25 @@ def train_full_dataset_classifier():
         print(f"   Weights: {final_classifier.weights}")
     
     # Show cross-validation results for all models
-    print(f"\n📊 All Model Performance (Cross-Validation):")
+    print(f"\nAll Model Performance (Cross-Validation):")
     sorted_models = sorted(cv_scores.items(), key=lambda x: x[1]['mean'], reverse=True)
     for name, scores in sorted_models:
         print(f"   {name}: {scores['mean']:.4f} (±{scores['std']*2:.4f})")
     
     # Performance analysis
-    print(f"\n📈 Performance Analysis:")
+    print(f"\nPerformance Analysis:")
     print(f"   Total training samples: {len(X)}")
     print(f"   Cross-validation accuracy: {best_score:.4f}")
     if best_score >= 0.95:
-        print(f"   🟢 Excellent performance (≥95%)")
+        print(f"   Excellent performance (≥95%)")
     elif best_score >= 0.90:
-        print(f"   🟡 Good performance (≥90%)")
+        print(f"   Good performance (≥90%)")
     elif best_score >= 0.80:
-        print(f"   🟠 Fair performance (≥80%)")
+        print(f"   Fair performance (≥80%)")
     else:
-        print(f"   🔴 Poor performance (<80%)")
-    
-    print(f"\n✅ Full dataset training complete!")
+        print(f"   Poor performance (<80%)")
+
+    print(f"\nFull dataset training complete!")
     print(f"   Use {model_filename} for live demo")
     print(f"   Expected accuracy: {best_score:.1%}")
     
@@ -265,12 +262,12 @@ if __name__ == "__main__":
     try:
         model_file, accuracy = train_full_dataset_classifier()
         
-        print(f"\n🎯 DEMO-READY MODEL CREATED!")
+        print(f"\nDEMO-READY MODEL CREATED!")
         print(f"   File: {model_file}")
         print(f"   Expected Accuracy: {accuracy:.1%}")
         print(f"   Ready for live inference!")
         
     except Exception as e:
-        print(f"❌ Training failed: {e}")
+        print(f"Training failed: {e}")
         import traceback
         traceback.print_exc()

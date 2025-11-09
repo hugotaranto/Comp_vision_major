@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
 """
-Test Current Model on Detection Output
-=====================================
-
 Test the existing trained model on the newly labeled detection_output pieces.
 This lets you evaluate performance before adding them to training.
 """

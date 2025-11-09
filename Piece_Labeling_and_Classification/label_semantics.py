@@ -1,13 +1,10 @@
 """
-Interactive Semantic Piece Labeling Tool
-========================================
-
 This tool scans the final_chess_dataset for unlabeled semantic images 
 and prompts the user to identify pieces by typing codes:
 - p: pawn
 - r: rook  
 - kn: knight
-- b: bishop
+- bi: bishop
 - q: queen
 - ki: king
 
@@ -27,13 +24,13 @@ PIECE_CODES = {
     'p': 'pawn',
     'r': 'rook', 
     'kn': 'knight',
-    'bi': 'bishop',  # Changed from 'b' to 'bi' to avoid conflict
+    'bi': 'bishop',
     'q': 'queen',
     'ki': 'king'
 }
 
 def display_semantic_piece(semantic_img, piece_value, img_name, original_img_path=None):
-    """Display a semantic piece alongside the original image for user labeling"""
+    "Display a semantic piece alongside the original image for user labeling"
     # Create binary mask for this piece
     piece_mask = (semantic_img == piece_value).astype(np.uint8) * 255
     
@@ -96,8 +93,8 @@ def display_semantic_piece(semantic_img, piece_value, img_name, original_img_pat
     
     return cropped_semantic
 
-def load_existing_labels(labels_file):
-    """Load existing labels from CSV file"""
+def load_existing_labels(labels_file): 
+    "Load existing labels from CSV file"
     if os.path.exists(labels_file):
         try:
             df = pd.read_csv(labels_file)
@@ -113,12 +110,12 @@ def load_existing_labels(labels_file):
         return df, set()
 
 def save_labels(labels_df, labels_file):
-    """Save labels to CSV file"""
+    "Save labels to CSV file"
     labels_df.to_csv(labels_file, index=False)
-    print(f"✓ Labels saved to {labels_file}")
+    print(f"Labels saved to {labels_file}")
 
 def find_corresponding_original_image(semantic_folder, img_file):
-    """Find the corresponding original image for a semantic mask"""
+    "Find the corresponding original image for a semantic mask"
     # Get the parent directory of the semantics folder
     parent_dir = os.path.dirname(semantic_folder)
     
@@ -163,7 +160,7 @@ def find_corresponding_original_image(semantic_folder, img_file):
     return None
 
 def organize_training_data(dataset_path):
-    """Move files from training_example folders into main training folders"""
+    "Move files from training_example folders into main training folders"
     training_path = os.path.join(dataset_path, 'training')
     training_example_path = os.path.join(training_path, 'training_example')
     
@@ -171,7 +168,7 @@ def organize_training_data(dataset_path):
         print(f"No training_example folder found at {training_example_path}")
         return
     
-    print(f"📁 Organizing training data from {training_example_path}")
+    print(f"Organizing training data from {training_example_path}")
     
     # Subfolders to merge
     subfolders = ['display', 'images', 'semantics']
@@ -234,16 +231,16 @@ def organize_training_data(dataset_path):
         
         if all_empty:
             shutil.rmtree(training_example_path)
-            print(f"   🗑️  Removed empty training_example folder")
+            print(f"   Removed empty training_example folder")
         else:
-            print(f"   📁 Kept training_example folder (some files remain)")
+            print(f"   Kept training_example folder (some files remain)")
     except Exception as e:
         print(f"     Could not remove training_example folder: {e}")
     
     print(" Training data organization complete!")
 
 def scan_and_label_semantics(dataset_path):
-    """Main function to scan and label semantic pieces"""
+    "Main function to scan and label semantic pieces"
     
     # Create labels file path
     labels_file = os.path.join(dataset_path, 'labels.csv')
@@ -311,7 +308,7 @@ def scan_and_label_semantics(dataset_path):
                         continue
                     
                     # Get user input
-                    print(f"\n🎯 Piece value {piece_value} in {img_file}")
+                    print(f"\nPiece value {piece_value} in {img_file}")
                     print("Enter piece type: p(awn), r(ook), kn(ight), bi(shop), q(ueen), ki(ng)")
                     print("Or: s(kip), x(quit), undo, edit")
                     
@@ -400,7 +397,7 @@ def scan_and_label_semantics(dataset_path):
                                 labeled_pieces.add((img_file, piece_value))
                                 total_labeled += 1
                                 
-                                print(f"✓ Labeled as {piece_type}")
+                                print(f"Labeled as {piece_type}")
                                 break
                             else:
                                 print("Error: Could not analyze piece contour")
@@ -441,7 +438,7 @@ def scan_and_label_semantics(dataset_path):
             print(f"   {piece_type}: {count}")
 
 def edit_existing_labels(dataset_path):
-    """Standalone function to edit existing labels"""
+    "Standalone function to edit existing labels"
     labels_file = os.path.join(dataset_path, 'labels.csv')
     
     if not os.path.exists(labels_file):
@@ -701,7 +698,6 @@ def edit_existing_labels(dataset_path):
             print("Invalid option")
 
 def main():
-    """Main entry point"""
     # Default dataset path
     dataset_path = "../detection/detection_output"
     

@@ -9,7 +9,6 @@ from .plots import *
 
 IMAGE_DIR = '../side_test'
 
-# LOWER_GREEN_HSV_THRESHOLD = [35, 85, 45]
 LOWER_GREEN_HSV_THRESHOLD = [35, 55, 40]
 UPPER_GREEN_HSV_THRESHOLD = [85, 255, 255]
 

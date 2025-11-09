@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 """
-Label Detection Output Data
-===========================
-
 Label the new unlabeled pieces in detection_output folder.
 Creates a separate CSV file for these pieces that can be:
 1. Used for testing the current model
@@ -31,7 +28,7 @@ def load_existing_detection_labels(labels_file):
 def save_detection_labels(labels_df, labels_file):
     """Save labels to CSV file"""
     labels_df.to_csv(labels_file, index=False)
-    print(f"💾 Saved {len(labels_df)} labels to {labels_file}")
+    print(f"Saved {len(labels_df)} labels to {labels_file}")
 
 def label_detection_output_pieces():
     """
@@ -83,14 +80,14 @@ def label_detection_output_pieces():
         # Load semantic image
         semantic_img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if semantic_img is None:
-            print(f"⚠️  Could not load {img_file}")
+            print(f"Could not load {img_file}")
             continue
         
         # Get unique piece values (excluding background)
         unique_values = np.unique(semantic_img)
         piece_values = [v for v in unique_values if v != 0 and v < 50]  # Assuming piece values are < 50
         
-        print(f"\n� Image: {img_file}")
+        print(f"\nImage: {img_file}")
         print(f"   Found {len(piece_values)} pieces: {piece_values}")
         
         # Find corresponding original image
@@ -114,7 +111,7 @@ def label_detection_output_pieces():
                     continue
                 
                 # Get user input
-                print(f"\n🎯 Piece value {piece_value} in {img_file}")
+                print(f"\nPiece value {piece_value} in {img_file}")
                 print("Enter piece type: p(awn), r(ook), kn(ight), bi(shop), q(ueen), ki(ng)")
                 print("Or: s(kip), x(quit), undo")
                 
@@ -138,7 +135,7 @@ def label_detection_output_pieces():
                             labels_df = labels_df.iloc[:-1]  # Remove last row
                             labeled_pieces.discard((last_label['image_name'], last_label['piece_value']))
                             save_detection_labels(labels_df, labels_file)
-                            print("✅ Last label removed")
+                            print("Last label removed")
                         else:
                             print("No labels to undo")
                         break
@@ -175,23 +172,23 @@ def label_detection_output_pieces():
                             # Save after each label
                             save_detection_labels(labels_df, labels_file)
                             
-                            print(f"✅ Labeled as {piece_type}")
+                            print(f"Labeled as {piece_type}")
                             total_labeled += 1
                             break
                         else:
-                            print("❌ Could not find piece contour")
+                            print("Could not find piece contour")
                     
                     else:
-                        print("❓ Invalid input. Use piece codes (p,r,kn,bi,q,ki), 's' to skip, 'x' to quit, or 'undo'")
-                
+                        print("Invalid input. Use piece codes (p,r,kn,bi,q,ki), 's' to skip, 'x' to quit, or 'undo'")
+
                 # Close the current plot
                 plt.close('all')
                 
             except Exception as e:
-                print(f"❌ Error processing piece {piece_value}: {e}")
+                print(f"Error processing piece {piece_value}: {e}")
                 continue
-    
-    print(f"\n✅ Labeling complete!")
+
+    print(f"\nLabeling complete!")
     print(f"   Total pieces labeled: {total_labeled}")
     print(f"   Total pieces skipped: {total_skipped}")
     print(f"   Final dataset size: {len(labels_df)} pieces")
@@ -233,7 +230,7 @@ def add_detection_labels_to_training():
     # Save combined dataset
     combined_df.to_csv(main_labels_file, index=False)
     
-    print(f"✅ Successfully merged datasets!")
+    print(f"Successfully merged datasets!")
     print(f"New training dataset: {len(combined_df)} pieces")
     print(f"Added {len(detection_df)} new pieces from detection_output")
 
@@ -251,7 +248,7 @@ def remove_specific_label():
         print("No labels to remove")
         return
     
-    print(f"\n📝 Current labels ({len(df)} total):")
+    print(f"\nCurrent labels ({len(df)} total):")
     for i, (idx, row) in enumerate(df.iterrows()):
         print(f"   {i+1}. {row['image_name']} piece {row['piece_value']}: {row['piece_type']}")
     
@@ -270,7 +267,7 @@ def remove_specific_label():
                     
                     # Save updated file
                     df.to_csv(labels_file, index=False)
-                    print(f"✅ Label removed. {len(df)} labels remaining.")
+                    print(f"Label removed. {len(df)} labels remaining.")
                 else:
                     print("Cancelled")
             else:
@@ -287,7 +284,7 @@ def show_detection_output_stats():
         return
     
     df = pd.read_csv(labels_file)
-    print(f"\n📊 Detection Output Statistics")
+    print(f"\nDetection Output Statistics")
     print(f"Total pieces labeled: {len(df)}")
     print(f"Piece type distribution:")
     piece_counts = df['piece_type'].value_counts()

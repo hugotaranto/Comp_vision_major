@@ -1,8 +1,5 @@
 """
-Standalone Chess Piece Inference Function
-========================================
-
-Simple function to run inference on semantic masks.
+Simple function to run inference on masks.
 Easy to integrate with other detection/tracking code.
 """
 
@@ -14,40 +11,7 @@ import os
 # Import the feature extraction function
 from .train_semantic_from_labeled import extract_geometric_features
 
-def predict_pieces_from_semantic(semantic_mask, model_path='semantic_chess_classifier.pkl', 
-                               piece_value_range=(1, 50), return_details=False):
-    """
-    Run inference on all pieces in a semantic mask.
-    
-    Args:
-        semantic_mask (numpy.ndarray): Grayscale semantic mask with different values for different pieces
-        model_path (str): Path to trained model file
-        piece_value_range (tuple): Range of values to consider as pieces (min, max)
-        return_details (bool): If True, returns additional info like confidence and features
-    
-    Returns:
-        dict: {
-            piece_value: {
-                'type': 'pawn'|'rook'|'knight'|'bishop'|'queen'|'king',
-                'confidence': 0.95,
-                'bbox': (x, y, w, h),  # bounding box
-                'area': 1234.5,        # piece area in pixels
-                'centroid': (cx, cy)   # center coordinates
-            }
-        }
-        
-        If return_details=True, also includes:
-            'features': numpy array of geometric features
-            'probabilities': dict of all class probabilities
-    
-    Example:
-        semantic = cv2.imread('board_mask.png', cv2.IMREAD_GRAYSCALE)
-        results = predict_pieces_from_semantic(semantic)
-        
-        for piece_id, info in results.items():
-            print(f"Piece {piece_id}: {info['type']} ({info['confidence']:.2f})")
-    """
-    
+def predict_pieces_from_semantic(semantic_mask, model_path='semantic_chess_classifier.pkl', piece_value_range=(1, 50), return_details=False):
     # Load model once
     if not hasattr(predict_pieces_from_semantic, '_cached_model'):
         if not os.path.exists(model_path):
@@ -145,10 +109,10 @@ def example_usage():
     if os.path.exists(semantic_path):
         semantic_mask = cv2.imread(semantic_path, cv2.IMREAD_GRAYSCALE)
         
-        print("🔍 Running inference on semantic mask...")
+        print("Running inference on semantic mask...")
         results = predict_pieces_from_semantic(semantic_mask, return_details=True)
         
-        print(f"\n✓ Found {len(results)} pieces:")
+        print(f"\nFound {len(results)} pieces:")
         for piece_id, info in results.items():
             print(f"  Piece {piece_id}: {info['type']} (confidence: {info['confidence']:.3f})")
             print(f"    Bbox: {info['bbox']}, Area: {info['area']:.0f}, Center: {info['centroid']}")
