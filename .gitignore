@@ -16,4 +16,7 @@ __pycache__
 *.npy
 photo_convert.py
 
+# Assignment report (kept out of the public repo; its content lives in README.md)
+comp_vision_major_final_report.pdf
+
 !2d_chess_pieces_images/*.png
