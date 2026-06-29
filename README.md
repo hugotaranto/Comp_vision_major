@@ -300,6 +300,33 @@ correct squares. `main.py` ties all four stages together.
 
 ## Known limitations and notes
 
+**Trained on one board and one piece set.** The system was trained and evaluated
+on a single physical chess set and board, so it does not yet generalise across
+piece designs, board colours, or lighting. This is not one weakness but three,
+each affecting a different stage of the pipeline:
+
+- **Board colour → localisation.** `detection/board_detect.py` isolates the board
+  with an HSV *green* mask, so a wooden, marble, or vinyl board fails before piece
+  detection even runs. Detecting the 8×8 alternating-square grid by its geometry
+  rather than its colour would remove this dependency.
+- **Piece colour + lighting → colour detection.** The white/black split
+  (`Piece_Labeling_and_Classification/colour_detect.py`) is a fixed luminance
+  threshold tuned to our pieces under
+  our lighting. A per-image split (e.g. Otsu or k-means over the detected pieces'
+  brightness) would adapt it to whatever two colours a given set uses.
+- **Piece design → type classification.** The ~50 geometric/contour features
+  describe *our* set's silhouettes, so a different design can make, say, a bishop
+  read as a pawn. Broader training data (multiple sets) plus a learned feature
+  extractor would raise the ceiling here.
+
+The reported 91.87% accuracy is an 80/20 split *within this one set* — i.e.
+in-domain performance, not a measure of generalisation. A leave-one-set-out
+evaluation across several physical sets would quantify the real generalisation
+gap and is the right next step. A chess-specific avenue for future work: because
+the starting position is fully known, a single photo of the initial setup yields
+32 labelled pieces, which could calibrate or few-shot-adapt the classifier to an
+unseen set on the fly.
+
 The code is research/coursework quality. Worth knowing before you run it:
 
 - **`main.py` default model path is broken** (`classifier_with_removed.pkl` does
