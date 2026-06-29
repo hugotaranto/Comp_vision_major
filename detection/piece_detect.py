@@ -56,6 +56,13 @@ def segment_board_plane(depth_map, board_mask):
         ransac_n=3,
         num_iterations=500
     )
+    # segment_plane's normal sign is arbitrary and can flip between runs.
+    # detect_pieces keeps height_residual < median - k*mad (the negative tail),
+    # and pieces sit closer to the camera (smaller depth z) than the board.
+    # Forcing the z-component positive makes their residual a*x+b*y+c*z+d land on
+    # that negative side, so pieces are always detected (prevents random zero-detection).
+    if plane_model[2] < 0:
+        plane_model = [-v for v in plane_model]
     [a, b, c, d] = plane_model
     return plane_model, inliers
 
@@ -247,7 +254,7 @@ def detect_pieces(image, depth_map, plane_model, corners, show=True):
             for (gx, gy) in global_points:
                 axes[2, 0].plot(gx, gy, 'ro', markersize=2)
 
-        axes[2, 1].imshow(display_image[..., ::-1])
+        axes[2, 1].imshow(display_image)
         axes[2, 1].set_title(f"Detected pieces ({num_labels-1})")
 
         for i in range(len(axes)):
@@ -498,6 +505,10 @@ def get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_tran
     print("getting board mask")
     corners = get_board_area(image, show=False, show_detail=False)
 
+    if corners is None:
+        print(f"Board not detected in image: {name}")
+        return None, None, None
+
     # expand the corners out slightly
     expanded_corners = expand_corners(corners, show=False, image=image, factor=1/4)
 
@@ -545,6 +556,9 @@ def main():
         name = names[i]
 
         segmentation_mask, image_resized, corners = get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform)
+
+        if segmentation_mask is None:
+            continue
 
         # plot_segmentation_mask(image_resized, segmentation_mask)
 

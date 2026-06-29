@@ -6,7 +6,8 @@ def load_model(checkpoint_path=""):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model, transform = depth_pro.create_model_and_transforms(device=device, precision=torch.half, checkpoint_path=checkpoint_path)
+    precision = torch.half if device.type == "cuda" else torch.float32
+    model, transform = depth_pro.create_model_and_transforms(device=device, precision=precision, checkpoint_path=checkpoint_path)
     model.eval()
 
     return model, transform
@@ -17,7 +18,8 @@ def depth_predict(image:np.ndarray, f_px, model, transform):
     image_t = transform(image)
 
     print("predicting")
-    torch.cuda.reset_peak_memory_stats()
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
     prediction = model.infer(image_t, f_px=f_px)
     depth_tensor = prediction['depth']
 
@@ -28,7 +30,8 @@ def depth_predict(image:np.ndarray, f_px, model, transform):
     depth = depth_tensor.detach().cpu().numpy()
 
     del image_t, depth_tensor, prediction
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return depth
 

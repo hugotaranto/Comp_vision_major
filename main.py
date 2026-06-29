@@ -15,7 +15,7 @@ SAM_MODEL_PATH = './sam_checkpoints/sam_vit_l_0b3195.pth'
 
 DEPTH_PRO_CHECKPOINT_PATH = './ml-depth-pro/checkpoints/depth_pro.pt'
 
-CLASSIFIER_MODEL_PATH = './Piece_Labeling_and_Classification/classifier_with_removed.pkl'
+CLASSIFIER_MODEL_PATH = './Piece_Labeling_and_Classification/semantic_chess_classifier.pkl'
 
 MAX_DIM = 1600
 
@@ -33,8 +33,7 @@ def plot_board_and_image(board_image, image):
     # Ensure both are the same height for consistent display
     h = min(board_image.shape[0], image.shape[0])
     board_resized = cv2.resize(board_image, (int(board_image.shape[1] * h / board_image.shape[0]), h))
-    image_resized = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
-                               (int(image.shape[1] * h / image.shape[0]), h))
+    image_resized = cv2.resize(image, (int(image.shape[1] * h / image.shape[0]), h))
 
     # Combine side by side
     combined = np.hstack((image_resized, board_resized))
@@ -62,6 +61,9 @@ def main():
         name = names[i]
 
         segmentation_mask, image_resized, corners = get_piece_segments(image, f_px, name, sam_predictor, depth_model, depth_transform)
+        if segmentation_mask is None:
+            print(f"Skipping {name}: board not detected")
+            continue
 
         plot_segmentation_mask(image_resized, segmentation_mask)
 
@@ -76,7 +78,7 @@ def main():
         for r in range(8):
             for c in range(8):
                 piece_id = board[r, c]
-                if piece_id != 0:
+                if piece_id != 0 and piece_id in pred:
                     colour = board_colours[r, c]
                     piece_type = pred[piece_id]['type']  # e.g., 'K', 'Q', etc.
                     labelled_board[r, c] = f"{colour}{piece_translate[piece_type]}"

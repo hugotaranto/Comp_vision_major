@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import shutil
 
+PIECE_VALUE_MAX = 50  # piece values >= this are background/sentinel
+
 # Piece type mappings
 PIECE_CODES = {
     'p': 'pawn',
@@ -154,9 +156,9 @@ def find_corresponding_original_image(semantic_folder, img_file):
             # Check if the image base name matches our original base (case insensitive)
             if image_base.lower() == original_base.lower():
                 return os.path.join(images_folder, image_file)
-    except:
-        pass
-    
+    except Exception as e:
+        print(f"Warning: {e}")
+
     return None
 
 def organize_training_data(dataset_path):
@@ -282,7 +284,7 @@ def scan_and_label_semantics(dataset_path):
             
             # Get unique piece values (excluding background)
             unique_values = np.unique(semantic_img)
-            piece_values = [v for v in unique_values if v != 0 and v < 50]  # Assuming piece values are < 50
+            piece_values = [v for v in unique_values if v != 0 and v < PIECE_VALUE_MAX]  # piece values >= PIECE_VALUE_MAX are background/sentinel
             
             print(f"\n Image: {img_file}")
             print(f"   Found {len(piece_values)} pieces: {piece_values}")

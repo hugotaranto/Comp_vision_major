@@ -170,7 +170,7 @@ def load_piece_images(pieces_folder="2d_chess_pieces_images"):
         
     return piece_images if piece_images else None
 
-def draw_chess_board(board=None, pieces_folder="2d_chess_pieces_images", piece_scale=0.8):
+def draw_chess_board(board=None, pieces_folder="2d_chess_pieces_images", piece_scale=0.8, title=None, save_path=None):
     """
     Draws a chess board and returns it as an RGB NumPy array (no display).
     """
@@ -190,7 +190,7 @@ def draw_chess_board(board=None, pieces_folder="2d_chess_pieces_images", piece_s
             color = light_square if (row + col) % 2 == 0 else dark_square
             ax.add_patch(Rectangle((col, 7-row), 1, 1, facecolor=color, edgecolor='none'))
             piece_code = board[row, col]
-            if piece_code:
+            if piece_code and piece_images and piece_code in piece_images:
                 piece_img = piece_images[piece_code]
                 imagebox = OffsetImage(piece_img, zoom=piece_scale * 0.6)
                 ab = AnnotationBbox(imagebox, (col + 0.5, 7-row + 0.5), frameon=False)
@@ -201,10 +201,14 @@ def draw_chess_board(board=None, pieces_folder="2d_chess_pieces_images", piece_s
     ax.set_ylim(0, 8)
     ax.set_aspect('equal')
     ax.axis('off')
+    if title:
+        ax.set_title(title)
 
     # Convert to image (RGB)
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
     plt.close(fig)
     buf.seek(0)
     img = Image.open(buf).convert("RGB")

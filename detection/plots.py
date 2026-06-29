@@ -130,7 +130,7 @@ def show_dbscan_clusters(depth_map, filtered_xy, labels, image, depth, centroids
 
 def plot_segmentation_mask(image, mask):
 
-    width, height = image.shape[:2]
+    height, width = image.shape[:2]
 
     combined_mask = np.ma.masked_where(mask == 0, mask) # mask out the zero values
 

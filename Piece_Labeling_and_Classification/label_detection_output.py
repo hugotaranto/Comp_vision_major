@@ -13,6 +13,8 @@ import cv2
 import matplotlib.pyplot as plt
 from label_semantics import display_semantic_piece, PIECE_CODES, find_corresponding_original_image
 
+PIECE_VALUE_MAX = 50  # piece values >= this are background/sentinel
+
 def load_existing_detection_labels(labels_file):
     """Load existing labels from detection output CSV file"""
     labels_df = pd.DataFrame()
@@ -85,7 +87,7 @@ def label_detection_output_pieces():
         
         # Get unique piece values (excluding background)
         unique_values = np.unique(semantic_img)
-        piece_values = [v for v in unique_values if v != 0 and v < 50]  # Assuming piece values are < 50
+        piece_values = [v for v in unique_values if v != 0 and v < PIECE_VALUE_MAX]  # piece values >= PIECE_VALUE_MAX are background/sentinel
         
         print(f"\nImage: {img_file}")
         print(f"   Found {len(piece_values)} pieces: {piece_values}")

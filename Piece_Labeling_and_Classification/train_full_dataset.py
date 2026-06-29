@@ -11,6 +11,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import pickle
 import matplotlib.pyplot as plt
@@ -149,7 +150,8 @@ def train_full_dataset_classifier():
     
     for name, classifier in classifiers.items():
         print(f"   Testing {name}...")
-        scores = cross_val_score(classifier, X_scaled, y, cv=5, scoring='accuracy')
+        pipe = Pipeline([('scaler', StandardScaler()), ('clf', classifier)])
+        scores = cross_val_score(pipe, X, y, cv=5, scoring='accuracy')
         cv_scores[name] = {
             'mean': scores.mean(),
             'std': scores.std(),

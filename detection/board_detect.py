@@ -61,7 +61,8 @@ def get_board_area(image, show=False, show_detail=False):
         plt.axis("off")
         plt.show()
 
-    mask_gray = (mask_green * 255).astype(np.uint8)
+    # cv2.inRange already returns a 0/255 uint8 mask; multiplying by 255 overflows
+    mask_gray = mask_green.copy()
 
     # Convert to float and blur/dilate
     mask_float = cv2.dilate(mask_gray.astype(np.float32), np.ones((3,3), np.uint8), iterations=1)
@@ -86,7 +87,7 @@ def get_board_area(image, show=False, show_detail=False):
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=60 , minLineLength=50, maxLineGap=1000)
     if lines is None:
         print("No lines detected.")
-        return np.zeros(mask_gray.shape, dtype=np.uint8), None
+        return None
 
     if show_detail:
         vis_lines = image.copy()

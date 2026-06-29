@@ -1,0 +1,16 @@
+# Python dependencies for the chessboard-reconstruction project
+matplotlib
+numpy
+open3d
+opencv-python
+pandas
+Pillow
+scikit-learn
+seaborn
+torch
+
+# segment-anything (Meta SAM) — install from source:
+#   pip install git+https://github.com/facebookresearch/segment-anything.git
+
+# depth_pro (Apple ml-depth-pro) — install from the bundled ml-depth-pro/ clone:
+#   pip install -e ./ml-depth-pro

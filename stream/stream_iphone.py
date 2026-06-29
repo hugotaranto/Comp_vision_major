@@ -57,7 +57,9 @@ def main():
             now = time.time()
             if now - last_capture_time >= CAPTURE_INTERVAL:
                 filename = os.path.join(SAVE_DIR, f"auto_{img_count:04d}.png")
-                cv2.imwrite(filename, frame)
+                success = cv2.imwrite(filename, frame)
+                if not success:
+                    print(f"[ERROR] Failed to auto-save {filename}")
                 print(f"[AUTO-SAVED] {filename}")
                 last_capture_time = now
                 img_count += 1

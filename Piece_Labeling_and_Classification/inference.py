@@ -12,28 +12,28 @@ import os
 from .train_semantic_from_labeled import extract_geometric_features
 
 def predict_pieces_from_semantic(semantic_mask, model_path='semantic_chess_classifier.pkl', piece_value_range=(1, 50), return_details=False):
-    # Load model once
-    if not hasattr(predict_pieces_from_semantic, '_cached_model'):
+    # Load model once per unique path (keyed by absolute path to avoid serving the wrong model)
+    if not hasattr(predict_pieces_from_semantic, '_model_cache'):
+        predict_pieces_from_semantic._model_cache = {}
+    cache_key = os.path.abspath(model_path)
+    if cache_key not in predict_pieces_from_semantic._model_cache:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}")
-        
         with open(model_path, 'rb') as f:
             model_data = pickle.load(f)
-        
-        predict_pieces_from_semantic._cached_model = {
+        predict_pieces_from_semantic._model_cache[cache_key] = {
             'classifier': model_data['classifier'],
             'scaler': model_data['scaler'],
             'piece_types': model_data['piece_types']
         }
-    
-    model = predict_pieces_from_semantic._cached_model
+    model = predict_pieces_from_semantic._model_cache[cache_key]
     classifier = model['classifier']
     scaler = model['scaler']
     
     # Find all unique piece values in the semantic mask
     unique_values = np.unique(semantic_mask)
     piece_values = [v for v in unique_values 
-                   if piece_value_range[0] <= v <= piece_value_range[1]]
+                   if piece_value_range[0] <= v < piece_value_range[1]]  # values >= upper bound are background/sentinel
     
     results = {}
     
@@ -96,8 +96,8 @@ def predict_pieces_from_semantic(semantic_mask, model_path='semantic_chess_class
 
 def clear_model_cache():
     """Clear the cached model (useful if you want to load a different model)"""
-    if hasattr(predict_pieces_from_semantic, '_cached_model'):
-        delattr(predict_pieces_from_semantic, '_cached_model')
+    if hasattr(predict_pieces_from_semantic, '_model_cache'):
+        delattr(predict_pieces_from_semantic, '_model_cache')
 
 # Example usage function
 def example_usage():

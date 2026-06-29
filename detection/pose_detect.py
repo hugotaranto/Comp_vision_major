@@ -2,10 +2,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
-
 from Piece_Labeling_and_Classification.colour_detect import get_piece_colour
 
 def detect_poses(segmentation_mask, corners, image, show=False, show_each=False):
@@ -79,7 +75,7 @@ def detect_poses(segmentation_mask, corners, image, show=False, show_each=False)
 
             plt.subplot(1, 2, 2)
             plt.title(f"Warped Image with Grid (Piece {piece_id})")
-            plt.imshow(cv2.cvtColor(image_with_grid, cv2.COLOR_BGR2RGB))
+            plt.imshow(image_with_grid)
             plt.axis("off")
             plt.show()
 
@@ -109,7 +105,7 @@ def detect_poses(segmentation_mask, corners, image, show=False, show_each=False)
 
         plt.subplot(1, 2, 2)
         plt.title("Warped Image with Grid")
-        plt.imshow(cv2.cvtColor(image_with_grid, cv2.COLOR_BGR2RGB))
+        plt.imshow(image_with_grid)
         plt.axis("off")
         plt.show()
 

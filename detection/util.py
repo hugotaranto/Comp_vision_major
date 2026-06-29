@@ -83,7 +83,9 @@ def load_images(file_path):
     f_pxs = []
     names = []
 
-    image_names = os.listdir(file_path)
+    VALID_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'}
+    image_names = [f for f in os.listdir(file_path)
+                   if os.path.splitext(f)[1].lower() in VALID_EXTENSIONS]
 
     for name in image_names:
         path = os.path.join(file_path, name)
@@ -165,16 +167,13 @@ def save_segmentations_to_file(output_dir, name, masks, image):
         colours = (cmap(normalized_vals)[:, :3] * 255).astype(np.uint8)
         colour_mask[nonzero] = colours
 
-    # Convert RGB to BGR for OpenCV
-    colour_mask_bgr = cv2.cvtColor(colour_mask, cv2.COLOR_RGB2BGR)
-
-    # Blend overlay
+    # Blend overlay in RGB
     overlay = image.copy().astype(np.float32) / 255.0
-    colour_mask_float = colour_mask_bgr.astype(np.float32) / 255.0
+    colour_mask_float = colour_mask.astype(np.float32) / 255.0
     alpha = 0.5
     blended = cv2.addWeighted(overlay, 1 - alpha, colour_mask_float, alpha, 0)
 
     colour_path = os.path.join(display_dir, f"{name}_mask_coloured.png")
-    cv2.imwrite(colour_path, (blended * 255).astype(np.uint8))
+    cv2.imwrite(colour_path, cv2.cvtColor((blended * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
 
