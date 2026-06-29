@@ -158,11 +158,10 @@ For each image this localises the board, estimates depth, detects and segments
 pieces, classifies each piece, detects its colour, and shows the original photo
 next to the rendered 2D board.
 
-> **Note:** `main.py` sets `CLASSIFIER_MODEL_PATH` to
-> `./Piece_Labeling_and_Classification/classifier_with_removed.pkl`, which is not
-> present in the repo. Point it at a committed model first, e.g.
-> `./Piece_Labeling_and_Classification/semantic_chess_classifier.pkl` or one of
-> the snapshots in `checkpoints/` (`4_trained_on_new_data.pkl` is the latest).
+> **Note:** `main.py` defaults `CLASSIFIER_MODEL_PATH` to the committed
+> `./Piece_Labeling_and_Classification/semantic_chess_classifier.pkl`. To try a
+> different model, repoint it at one of the snapshots in `checkpoints/`
+> (`4_trained_on_new_data.pkl` is the latest).
 
 ### Detection / mask generation only
 
@@ -301,8 +300,9 @@ correct squares. `main.py` ties all four stages together.
 ## Known limitations and notes
 
 **Trained on one board and one piece set.** The system was trained and evaluated
-on a single physical chess set and board, so it does not yet generalise across
-piece designs, board colours, or lighting. This is not one weakness but three,
+on a single physical set — a *StonKraft 17″ × 17″ tournament set (green-and-white
+board, black-and-white pieces)* — so it does not yet generalise across piece
+designs, board colours, or lighting. This is not one weakness but three,
 each affecting a different stage of the pipeline:
 
 - **Board colour → localisation.** `detection/board_detect.py` isolates the board
@@ -329,8 +329,6 @@ unseen set on the fly.
 
 The code is research/coursework quality. Worth knowing before you run it:
 
-- **`main.py` default model path is broken** (`classifier_with_removed.pkl` does
-  not exist) — repoint it as described under [Usage](#usage).
 - **External assets required:** the SAM and Depth Pro checkpoints and the
   `ml-depth-pro` package are not vendored; the full pipeline will not run without
   them.
@@ -345,7 +343,7 @@ The code is research/coursework quality. Worth knowing before you run it:
 - **`PROGRESS_SUMMARY.md` is historical** and predates the final dataset (it
   references "58 labeled pieces" and an older folder layout); the README above is
   the current source of truth.
-- **No automated tests or `requirements.txt`.**
+- **No automated test suite.**
 
 Known model-level failure modes (from the report): king↔queen confusion,
 occasional misses for occluded or image-border pieces, and corner drift under
